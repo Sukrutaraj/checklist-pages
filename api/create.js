@@ -1,39 +1,55 @@
 export default async function handler(req, res) {
 
-  if(req.method !== "POST"){
+  // 🔥 CORS (löser fetch error)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // 🔥 preflight
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST allowed" });
   }
 
-  try{
+  try {
 
     const data = req.body;
 
     const token = process.env.GITHUB_TOKEN;
-    const repo = "checklist-pages";
     const owner = "Sukrutaraj";
+    const repo = "checklist-pages";
 
     const filename = `checklist-${Date.now()}.html`;
 
-    // 🧠 skapa HTML från checklistData
+    // 🎯 bygg HTML
     let html = `
     <!DOCTYPE html>
     <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${data.title}</title>
+    </head>
     <body style="font-family:sans-serif;padding:20px;">
-    <h2>${data.title}</h2>
+      <h2>${data.title}</h2>
     `;
 
-    (data.steps || []).forEach((step,i)=>{
-      if(!step.text) return;
+    (data.steps || []).forEach((step, i) => {
 
-      html += `<div style="margin-bottom:20px;">
-      <b>${i+1}. ${step.text}</b><br>`;
+      if (!step.text && !step.img && !step.audio) return;
 
-      if(step.img){
+      html += `<div style="margin-bottom:20px;">`;
+
+      html += `<b>${i + 1}. ${step.text || ""}</b><br>`;
+
+      if (step.img) {
         html += `<img src="${step.img}" style="max-width:300px;"><br>`;
       }
 
-      if(step.audio){
-        html += `<button onclick="new Audio('${step.audio}').play()">🔊</button>`;
+      if (step.audio) {
+        html += `<button onclick="new Audio('${step.audio}').play()">🔊 Spela</button><br>`;
       }
 
       html += `</div>`;
@@ -41,22 +57,26 @@ export default async function handler(req, res) {
 
     html += `</body></html>`;
 
-    // 🔥 GitHub API upload
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filename}`, {
-      method: "PUT",
-      headers: {
-        "Authorization": `token ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: "new checklist",
-        content: Buffer.from(html).toString("base64")
-      })
-    });
+    // 🔥 skicka till GitHub
+    const githubRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${filename}`,
+      {
+        method: "PUT",
+        headers: {
+          "Authorization": `token ${token}`, // ✅ viktigt
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: "create checklist",
+          content: Buffer.from(html).toString("base64")
+        })
+      }
+    );
 
-    const result = await response.json();
+    const result = await githubRes.json();
 
-    if(result.content){
+    // 🔥 om lyckad
+    if (result.content) {
 
       const url = `https://${owner}.github.io/${repo}/${filename}`;
 
@@ -65,13 +85,22 @@ export default async function handler(req, res) {
         url: url
       });
 
-    }else{
-      console.log("GitHub response:", result);
-return res.status(200).json(result);
+    } else {
+
+      // 🔥 visa exakt GitHub-fel
+      return res.status(500).json({
+        error: "GitHub error",
+        details: result
+      });
+
     }
 
-  }catch(err){
-    console.error(err);
-    return res.status(500).json({ error: "Server error" });
+  } catch (err) {
+
+    return res.status(500).json({
+      error: "Server error",
+      message: err.message
+    });
+
   }
 }
