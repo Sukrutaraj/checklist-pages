@@ -91,10 +91,12 @@ img{
 button, .smallBtn {
   transition: all 0.1s ease;
 }
+
 button:active, .smallBtn:active {
   transform: scale(0.95);
   background:#ddd;
 }
+
 .tool-btn:active .icon {
   transform: scale(0.92);
   background:#eee;
@@ -156,20 +158,33 @@ let checklistData = { title:"", steps:[] };
 let stream = null;
 let recorder = null;
 let chunks = [];
-let currentStepIndex = null;
+
+/* ===== CLICK FEEDBACK ===== */
+function clickFeedback(){
+  try{
+    const audio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=");
+    audio.volume = 0.2;
+    audio.play();
+  }catch(e){}
+}
+
+document.addEventListener("click", e=>{
+  if(e.target.tagName === "BUTTON" || e.target.closest(".tool-btn")){
+    clickFeedback();
+  }
+});
 
 /* ===== CREATE LINK ===== */
 async function createLink(){
 
   updateData();
 
-// 🚫 STOPPA TOM CHECKLISTA
-const hasContent = checklistData.steps.some(s => s.text || s.img || s.audio);
+  const hasContent = checklistData.steps.some(s => s.text || s.img || s.audio);
 
-if(!checklistData.title && !hasContent){
-  alert("Checklistan är tom. Lägg till minst ett steg.");
-  return;
-}
+  if(!checklistData.title && !hasContent){
+    alert("Checklistan är tom. Lägg till minst ett steg.");
+    return;
+  }
 
   alert("Skickar till server...");
 
@@ -182,12 +197,21 @@ if(!checklistData.title && !hasContent){
 
     const data = await res.json();
 
-    alert(JSON.stringify(data, null, 2));
+    if(data.url){
+
+      await navigator.clipboard.writeText(data.url);
+
+      alert("Länk skapad och kopierad!\n\n" + data.url);
+
+    } else {
+      alert("Fel:\n" + JSON.stringify(data, null, 2));
+    }
 
   }catch(err){
     alert("Fetch error: " + err.message);
   }
 }
+
 /* ===== DATA ===== */
 function updateData(){
   checklistData.title = document.getElementById("title").value;
@@ -218,16 +242,14 @@ function render(){
 
       <br>
 
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span>📷</span>
-        <input type="file" onchange="loadImage(event,${i})">
+      <div>
+        📷 <input type="file" onchange="loadImage(event,${i})">
       </div>
 
       ${step.img ? `<img src="${step.img}">` : ''}
 
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span>🔊</span>
-        <input type="file" accept="audio/*" onchange="loadAudio(event,${i})">
+      <div>
+        🔊 <input type="file" accept="audio/*" onchange="loadAudio(event,${i})">
         ${step.audio ? `<span>✔</span>` : ''}
       </div>
 
@@ -255,16 +277,52 @@ function removeStep(i){
   render();
 }
 
-/* ===== IMAGE ===== */
+/* ===== IMAGE (komprimering) ===== */
 function loadImage(e,i){
   const file = e.target.files[0];
   if(!file) return;
 
+  const img = new Image();
   const reader = new FileReader();
-  reader.onload = ()=>{
-    checklistData.steps[i].img = reader.result;
-    render();
+
+  reader.onload = function(event){
+    img.onload = function(){
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const maxWidth = 600;
+      let width = img.width;
+      let height = img.height;
+
+      if(width > maxWidth){
+        const scale = maxWidth / width;
+        width = maxWidth;
+        height = height * scale;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(function(blob){
+
+        const reader2 = new FileReader();
+        reader2.onload = function(){
+          checklistData.steps[i].img = reader2.result;
+          render();
+        };
+
+        reader2.readAsDataURL(blob);
+
+      }, "image/jpeg", 0.6);
+
+    };
+
+    img.src = event.target.result;
   };
+
   reader.readAsDataURL(file);
 }
 
@@ -281,22 +339,23 @@ function loadAudio(e,i){
   reader.readAsDataURL(file);
 }
 
-/* ===== RECORD ===== */
+/* ===== RECORD (FIXED) ===== */
 async function startRec(i){
   await initMic();
-  currentStepIndex = i;
   chunks = [];
 
   recorder = new MediaRecorder(stream);
   recorder.ondataavailable = e => chunks.push(e.data);
 
   recorder.onstop = () => {
-    const blob = new Blob(chunks);
+    const blob = new Blob(chunks, { type: "audio/webm" });
+
     const reader = new FileReader();
     reader.onload = () => {
       checklistData.steps[i].audio = reader.result;
       render();
     };
+
     reader.readAsDataURL(blob);
   };
 
@@ -315,6 +374,44 @@ function playRec(i){
   }
 }
 
+/* ===== EXPORT ===== */
+function exportFiles(){
+
+  alert("Laddar ner filer...");
+
+  let delay = 0;
+
+  checklistData.steps.forEach((step,i)=>{
+
+    if(step.img){
+      setTimeout(()=>download(step.img, `bild_${i+1}.jpg`), delay);
+      delay += 400;
+    }
+
+    if(step.audio){
+      setTimeout(()=>download(step.audio, `ljud_${i+1}.webm`), delay);
+      delay += 400;
+    }
+
+  });
+
+  setTimeout(downloadHTML, delay + 400);
+}
+
+/* ===== HTML ===== */
+function downloadHTML(){
+
+  updateData();
+
+  let html = `<h2>${checklistData.title}</h2>`;
+
+  checklistData.steps.forEach((s,i)=>{
+    html += `<div>${s.text||""}</div>`;
+  });
+
+  download(html,"checklista.html","text/html");
+}
+
 /* ===== JSON ===== */
 function exportJSON(){
   updateData();
@@ -322,58 +419,76 @@ function exportJSON(){
 }
 
 function importJSON(){
+
   let input=document.createElement("input");
   input.type="file";
 
   input.onchange=e=>{
     let r=new FileReader();
+
     r.onload=()=>{
-      checklistData=JSON.parse(r.result);
-      document.getElementById("title").value=checklistData.title||"";
-      render();
+      try{
+        checklistData=JSON.parse(r.result);
+
+        checklistData.steps = (checklistData.steps || []).map(s=>({
+          text:s.text||"",
+          img:s.img||"",
+          audio:s.audio||""
+        }));
+
+        document.getElementById("title").value=checklistData.title||"";
+        render();
+        alert("Checklista laddad!");
+      }catch{
+        alert("Ogiltig fil");
+      }
     };
+
     r.readAsText(e.target.files[0]);
   };
 
   input.click();
 }
 
-/* ===== PREVIEW FIXED ===== */
+/* ===== PREVIEW ===== */
 function generatePreview(){
 
   updateData();
 
-  let html = `<h3>${checklistData.title}</h3>`;
+  let html=`<h3>${checklistData.title}</h3>`;
 
   checklistData.steps.forEach((s,i)=>{
-
     if(!s.text && !s.img && !s.audio) return;
 
-    html += `
-      <div style="margin-bottom:15px;">
+    html+=`
+      <div>
         <b>Steg ${i+1}</b><br>
-        ${s.text || ""}<br>
-
+        ${s.text||""}<br>
         ${s.img ? `<img src="${s.img}">` : ''}
-
-        ${s.audio ? `<button onclick="new Audio('${s.audio}').play()">▶️ Spela ljud</button>` : ''}
-      </div>
+        ${s.audio ? `<button onclick="new Audio('${s.audio}').play()">▶️</button>` : ''}
+      </div><br>
     `;
   });
 
   const preview = document.getElementById("preview");
   preview.innerHTML = html;
-  preview.style.display = "block";
+  preview.style.display="block";
 }
 
 /* ===== DOWNLOAD ===== */
 function download(data,name,type="text/plain"){
   const blob = new Blob([data],{type});
   const url = URL.createObjectURL(blob);
+
   const a=document.createElement("a");
   a.href=url;
   a.download=name;
+
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 /* INIT */
