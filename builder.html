@@ -163,6 +163,14 @@ async function createLink(){
 
   updateData();
 
+// 🚫 STOPPA TOM CHECKLISTA
+const hasContent = checklistData.steps.some(s => s.text || s.img || s.audio);
+
+if(!checklistData.title && !hasContent){
+  alert("Checklistan är tom. Lägg till minst ett steg.");
+  return;
+}
+
   alert("Skickar till server...");
 
   try{
