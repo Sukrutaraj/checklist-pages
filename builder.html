@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Aktivitets-checklista</title>
+
+<style>
+body{
+  font-family:sans-serif;
+  background:#f5f5f5;
+  text-align:center;
+  padding:20px;
+  max-width:900px;
+  margin:auto;
+}
+
+.section{
+  background:white;
+  padding:12px;
+  margin:10px auto;
+  border-radius:12px;
+}
+
+input{
+  width:90%;
+  padding:8px;
+  margin:6px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+.step{
+  border:1px solid #eee;
+  border-radius:10px;
+  padding:10px;
+  margin:8px 0;
+}
+
+img{
+  max-height:100px;
+  margin-top:6px;
+  border-radius:8px;
+}
+
+.smallBtn{
+  background:#eee;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  margin:3px;
+}
+
+.tool-row{
+  display:flex;
+  justify-content:center;
+  gap:25px;
+  margin-top:15px;
+  flex-wrap:wrap;
+}
+
+.tool-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  cursor:pointer;
+}
+
+.tool-btn .icon{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #333;
+  font-size:26px;
+  background:white;
+}
+
+.tool-btn .label{
+  margin-top:6px;
+  font-size:13px;
+}
+
+#preview{
+  display:none;
+  text-align:left;
+}
+
+button, .smallBtn {
+  transition: all 0.1s ease;
+}
+button:active, .smallBtn:active {
+  transform: scale(0.95);
+  background:#ddd;
+}
+.tool-btn:active .icon {
+  transform: scale(0.92);
+  background:#eee;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Digital Aktivitets-checklista</h2>
+
+<div class="section">
+  <input id="title" placeholder="Titel på checklistan" oninput="updateData()">
+</div>
+
+<div id="steps"></div>
+
+<button onclick="addStep()">➕ Lägg till steg</button>
+
+<div class="tool-row">
+
+  <div class="tool-btn" onclick="exportFiles()">
+    <div class="icon">📁</div>
+    <div class="label">Export (GitHub)</div>
+  </div>
+
+  <div class="tool-btn" onclick="downloadHTML()">
+    <div class="icon">📄</div>
+    <div class="label">Ladda ner HTML</div>
+  </div>
+
+  <div class="tool-btn" onclick="exportJSON()">
+    <div class="icon">⬇️</div>
+    <div class="label">Ladda ner JSON</div>
+  </div>
+
+  <div class="tool-btn" onclick="importJSON()">
+    <div class="icon">⬆️</div>
+    <div class="label">Ladda upp JSON</div>
+  </div>
+
+  <div class="tool-btn" onclick="createLink()">
+    <div class="icon">🔗</div>
+    <div class="label">Skapa länk</div>
+  </div>
+
+</div>
+
+<br>
+
+<button onclick="generatePreview()">▶️ Generera preview</button>
+
+<div id="preview" class="section"></div>
+
+<script>
+
+let checklistData = { title:"", steps:[] };
+
+let stream = null;
+let recorder = null;
+let chunks = [];
+let currentStepIndex = null;
+
+/* ===== CREATE LINK ===== */
+async function createLink(){
+
+  updateData();
+
+  alert("Skickar till server...");
+
+  try{
+    const res = await fetch("https://checklist-pages-1zm2jo14o-sukrutarajs-projects.vercel.app/api/create", {
+      method:"POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify(checklistData)
+    });
+
+    const data = await res.json();
+
+    console.log("SERVER SVAR:", data);
+
+    if(data.url){
+      alert("Din länk:\n" + data.url);
+    }else{
+      alert("Fel från server:\n" + JSON.stringify(data));
+    }
+
+  }catch(err){
+    alert("Fetch error (kolla console)");
+    console.error(err);
+  }
+}
+
+/* ===== DATA ===== */
+function updateData(){
+  checklistData.title = document.getElementById("title").value;
+}
+
+/* ===== MIC ===== */
+async function initMic(){
+  if(!stream){
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }
+}
+
+/* ===== RENDER ===== */
+function render(){
+  const container=document.getElementById("steps");
+  container.innerHTML="";
+
+  checklistData.steps.forEach((step,i)=>{
+
+    const div=document.createElement("div");
+    div.className="section step";
+
+    div.innerHTML=`
+      <b>Steg ${i+1}</b><br>
+
+      <input value="${step.text||''}" placeholder="Beskrivning"
+      oninput="checklistData.steps[${i}].text=this.value">
+
+      <br>
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>📷</span>
+        <input type="file" onchange="loadImage(event,${i})">
+      </div>
+
+      ${step.img ? `<img src="${step.img}">` : ''}
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>🔊</span>
+        <input type="file" accept="audio/*" onchange="loadAudio(event,${i})">
+        ${step.audio ? `<span>✔</span>` : ''}
+      </div>
+
+      <button class="smallBtn" onclick="startRec(${i})">🎤 Spela in</button>
+      <button class="smallBtn" onclick="stopRec()">⏹ Stoppa</button>
+      <button class="smallBtn" onclick="playRec(${i})">▶️ Lyssna</button>
+
+      <br>
+
+      <button class="smallBtn" onclick="removeStep(${i})">🗑</button>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+/* ===== STEG ===== */
+function addStep(){
+  checklistData.steps.push({text:"",img:"",audio:""});
+  render();
+}
+
+function removeStep(i){
+  checklistData.steps.splice(i,1);
+  render();
+}
+
+/* ===== IMAGE ===== */
+function loadImage(e,i){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    checklistData.steps[i].img = reader.result;
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ===== AUDIO ===== */
+function loadAudio(e,i){
+  const file=e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    checklistData.steps[i].audio = reader.result;
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ===== RECORD ===== */
+async function startRec(i){
+  await initMic();
+  currentStepIndex = i;
+  chunks = [];
+
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+
+  recorder.onstop = () => {
+    const blob = new Blob(chunks);
+    const reader = new FileReader();
+    reader.onload = () => {
+      checklistData.steps[i].audio = reader.result;
+      render();
+    };
+    reader.readAsDataURL(blob);
+  };
+
+  recorder.start();
+}
+
+function stopRec(){
+  if(recorder && recorder.state === "recording"){
+    recorder.stop();
+  }
+}
+
+function playRec(i){
+  if(checklistData.steps[i].audio){
+    new Audio(checklistData.steps[i].audio).play();
+  }
+}
+
+/* ===== JSON ===== */
+function exportJSON(){
+  updateData();
+  download(JSON.stringify(checklistData,null,2),"checklista.json","application/json");
+}
+
+function importJSON(){
+  let input=document.createElement("input");
+  input.type="file";
+
+  input.onchange=e=>{
+    let r=new FileReader();
+    r.onload=()=>{
+      checklistData=JSON.parse(r.result);
+      document.getElementById("title").value=checklistData.title||"";
+      render();
+    };
+    r.readAsText(e.target.files[0]);
+  };
+
+  input.click();
+}
+
+/* ===== PREVIEW FIXED ===== */
+function generatePreview(){
+
+  updateData();
+
+  let html = `<h3>${checklistData.title}</h3>`;
+
+  checklistData.steps.forEach((s,i)=>{
+
+    if(!s.text && !s.img && !s.audio) return;
+
+    html += `
+      <div style="margin-bottom:15px;">
+        <b>Steg ${i+1}</b><br>
+        ${s.text || ""}<br>
+
+        ${s.img ? `<img src="${s.img}">` : ''}
+
+        ${s.audio ? `<button onclick="new Audio('${s.audio}').play()">▶️ Spela ljud</button>` : ''}
+      </div>
+    `;
+  });
+
+  const preview = document.getElementById("preview");
+  preview.innerHTML = html;
+  preview.style.display = "block";
+}
+
+/* ===== DOWNLOAD ===== */
+function download(data,name,type="text/plain"){
+  const blob = new Blob([data],{type});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=name;
+  a.click();
+}
+
+/* INIT */
+addStep();
+
+</script>
+
+</body>
+</html>
