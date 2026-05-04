@@ -166,7 +166,7 @@ async function createLink(){
   alert("Skickar till server...");
 
   try{
-    const res = await fetch("https://checklist-pages-1zm2jo14o-sukrutarajs-projects.vercel.app/api/create", {
+    const res = await fetch("https://checklist-pages.vercel.app/api/create", {
       method:"POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify(checklistData)
@@ -174,20 +174,12 @@ async function createLink(){
 
     const data = await res.json();
 
-    console.log("SERVER SVAR:", data);
-
-    if(data.url){
-      alert("Din länk:\n" + data.url);
-    }else{
-      alert("Fel från server:\n" + JSON.stringify(data));
-    }
+    alert(JSON.stringify(data, null, 2));
 
   }catch(err){
-    alert("Fetch error (kolla console)");
-    console.error(err);
+    alert("Fetch error: " + err.message);
   }
 }
-
 /* ===== DATA ===== */
 function updateData(){
   checklistData.title = document.getElementById("title").value;
