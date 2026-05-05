@@ -229,6 +229,18 @@ async function createLink(){
 
   html += `</body></html>`;
 
+  // 🔥 STORLEKSKONTROLL (NY)
+  const size = new Blob([html]).size;
+
+  if(size > 900000){
+    alert(
+      "Checklistan är för stor.\n\n" +
+      "Detta händer när många bilder eller ljud används.\n\n" +
+      "Tips:\n- Ta bort några bilder/ljud\n- Eller skapa flera mindre checklistor"
+    );
+    return;
+  }
+
   try{
 
     const res = await fetch(`https://api.github.com/repos/Sukrutaraj/checklist-pages/contents/${filename}`, {
@@ -247,20 +259,19 @@ async function createLink(){
 
     if(data.content){
 
-     const url = `https://sukrutaraj.github.io/checklist-pages/${filename}`;
+      const url = `https://sukrutaraj.github.io/checklist-pages/${filename}`;
 
-await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(url);
 
-alert(
-  "Länk skapad och kopierad!\n\n" +
-  url +
-  "\n\nOm sidan inte öppnas direkt:\nvänta 10–20 sek och försök igen."
-);
+      alert(
+        "Länk skapad och kopierad!\n\n" +
+        url +
+        "\n\nOm sidan inte öppnas direkt:\nvänta 10–20 sek och försök igen."
+      );
 
-// 🔥 LÄGG DEN HÄR
-setTimeout(()=>{
-  window.open(url, "_blank");
-}, 15000);
+      setTimeout(()=>{
+        window.open(url, "_blank");
+      }, 15000);
 
     } else {
 
