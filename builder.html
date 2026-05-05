@@ -247,11 +247,20 @@ async function createLink(){
 
     if(data.content){
 
-      const url = `https://sukrutaraj.github.io/checklist-pages/${filename}`;
+     const url = `https://sukrutaraj.github.io/checklist-pages/${filename}`;
 
-      await navigator.clipboard.writeText(url);
+await navigator.clipboard.writeText(url);
 
-      alert("Länk skapad och kopierad!\n\n" + url);
+alert(
+  "Länk skapad och kopierad!\n\n" +
+  url +
+  "\n\nOm sidan inte öppnas direkt:\nvänta 10–20 sek och försök igen."
+);
+
+// 🔥 LÄGG DEN HÄR
+setTimeout(()=>{
+  window.open(url, "_blank");
+}, 15000);
 
     } else {
 
