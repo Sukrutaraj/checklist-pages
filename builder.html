@@ -219,9 +219,61 @@ async function createLink(){
   <head>
     <meta charset="UTF-8">
     <title>${checklistData.title}</title>
+
+    <style>
+      body{
+        font-family:sans-serif;
+        padding:20px;
+        background:#f5f5f5;
+      }
+
+      h2{
+        text-align:center;
+      }
+
+      .step{
+        background:white;
+        padding:10px;
+        margin:10px 0;
+        border-radius:10px;
+        display:flex;
+        gap:10px;
+        align-items:center;
+      }
+
+      .step img{
+        max-width:120px;
+        border-radius:8px;
+      }
+
+      .completed{
+        background:#e5f7e5;
+        opacity:0.7;
+      }
+
+      .text{
+        flex:1;
+      }
+
+      .progress{
+        text-align:center;
+        font-size:18px;
+        margin-top:20px;
+      }
+
+      button{
+        padding:8px 12px;
+        margin-top:10px;
+      }
+    </style>
+
   </head>
-  <body style="font-family:sans-serif;padding:20px;">
-    <h2>${checklistData.title}</h2>
+
+  <body>
+
+  <h2>${checklistData.title}</h2>
+
+  <div id="steps">
   `;
 
   try{
@@ -232,39 +284,74 @@ async function createLink(){
 
       if(!s.text && !s.img && !s.audio) continue;
 
-      html += `<div style="margin-bottom:20px;">`;
-      html += `<b>${i+1}. ${s.text||""}</b><br>`;
+      html += `<div class="step">`;
+
+      html += `<input type="checkbox" onchange="toggleStep(this)">`;
+
+      html += `<div class="text"><b>${i+1}. ${s.text||""}</b><br>`;
 
       // 📷 BILD
-     if(s.img){
+      if(s.img){
+        const imgName = `${basePath}-img-${i}.jpg`;
+        const base64 = s.img.split(",")[1];
 
-  const imgName = `${basePath}-img-${i}.jpg`;
-  const base64 = s.img.split(",")[1];
+        await uploadFile(imgName, base64, token);
+        await new Promise(r => setTimeout(r, 300));
 
-  await uploadFile(imgName, base64, token);
-  await new Promise(r => setTimeout(r, 300));
-
-  html += `<img src="https://sukrutaraj.github.io/checklist-pages/${imgName}" style="max-width:300px;"><br>`;
-
-}
+        html += `<img src="https://sukrutaraj.github.io/checklist-pages/${imgName}"><br>`;
+      }
 
       // 🔊 LJUD
       if(s.audio){
+        const audioName = `${basePath}-audio-${i}.webm`;
+        const base64 = s.audio.split(",")[1];
 
-  const audioName = `${basePath}-audio-${i}.webm`;
-  const base64 = s.audio.split(",")[1];
+        await uploadFile(audioName, base64, token);
+        await new Promise(r => setTimeout(r, 300));
 
-  await uploadFile(audioName, base64, token);
-  await new Promise(r => setTimeout(r, 300));
+        html += `<button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/${audioName}').play()">🔊 Spela</button>`;
+      }
 
-  html += `<button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/${audioName}').play()">🔊 Spela</button><br>`;
-
-}
-
-      html += `</div>`;
+      html += `</div></div>`;
     }
 
-    html += `</body></html>`;
+    html += `
+    </div>
+
+    <div class="progress" id="progressText">0 av 0 klara</div>
+
+    <div style="text-align:center;">
+      <button onclick="resetChecklist()">Återställ</button>
+    </div>
+
+    <script>
+
+      function toggleStep(el){
+        const step = el.closest('.step');
+        step.classList.toggle('completed', el.checked);
+        updateProgress();
+      }
+
+      function updateProgress(){
+        const total = document.querySelectorAll('.step').length;
+        const done = document.querySelectorAll('.step input:checked').length;
+        document.getElementById('progressText').textContent =
+          done + " av " + total + " klara";
+      }
+
+      function resetChecklist(){
+        document.querySelectorAll('input[type="checkbox"]').forEach(chk => chk.checked = false);
+        document.querySelectorAll('.step').forEach(div => div.classList.remove('completed'));
+        updateProgress();
+      }
+
+      updateProgress();
+
+    </script>
+
+  </body>
+  </html>
+  `;
 
     const htmlName = `${basePath}.html`;
 
@@ -276,22 +363,20 @@ async function createLink(){
 
     const url = `https://sukrutaraj.github.io/checklist-pages/${htmlName}`;
 
-  let copied = false;
+    let copied = false;
 
-try{
-  await navigator.clipboard.writeText(url);
-  copied = true;
-}catch(e){
-  copied = false;
-}
+    try{
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    }catch(e){}
 
-alert(
-  "Länk skapad!\n\n" +
-  url +
-  "\n\n" +
-  (copied ? "✔ Kopierad till urklipp" : "⚠️ Kunde inte kopiera automatiskt") +
-  "\n\nVänta 10–20 sek innan du öppnar."
-);
+    alert(
+      "Länk skapad!\n\n" +
+      url +
+      "\n\n" +
+      (copied ? "✔ Kopierad" : "⚠️ Kopiera manuellt") +
+      "\n\nVänta 10–20 sek innan du öppnar."
+    );
 
     setTimeout(()=>{
       window.open(url, "_blank");
