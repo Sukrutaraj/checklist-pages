@@ -489,19 +489,24 @@ function importJSON(){
 
     r.onload=()=>{
       try{
-        checklistData=JSON.parse(r.result);
+        const raw = JSON.parse(r.result);
 
-        checklistData.steps = (checklistData.steps || []).map(s=>({
-          text:s.text||"",
-          img:s.img||"",
-          audio:s.audio||""
-        }));
+        checklistData = {
+          title: raw.title || "",
+          steps: (raw.steps || []).map(s => ({
+            text: s.text || "",
+            img: s.img || "",
+            audio: s.audio || ""
+          }))
+        };
 
-        document.getElementById("title").value=checklistData.title||"";
+        document.getElementById("title").value = checklistData.title;
         render();
-        alert("Checklista laddad!");
+
+        alert("Checklista laddad korrekt!");
+
       }catch{
-        alert("Ogiltig fil");
+        alert("Ogiltig JSON-fil");
       }
     };
 
