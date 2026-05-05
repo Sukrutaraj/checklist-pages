@@ -159,6 +159,23 @@ let stream = null;
 let recorder = null;
 let chunks = [];
 
+  async function uploadFile(path, content, token){
+
+  const res = await fetch(`https://api.github.com/repos/Sukrutaraj/checklist-pages/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `token ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: "upload file",
+      content: content
+    })
+  });
+
+  return await res.json();
+}
+  
 /* ===== CLICK FEEDBACK ===== */
 function clickFeedback(){
   try{
@@ -186,17 +203,16 @@ async function createLink(){
     return;
   }
 
-  // 🔐 fråga efter token
   let token = localStorage.getItem("gh_token");
 
   if(!token){
     token = prompt("Klistra in din GitHub token:");
     if(!token) return;
-
     localStorage.setItem("gh_token", token);
   }
 
-  const filename = `checklist-${Date.now()}.html`;
+  const id = Date.now();
+  const basePath = `checklist-${id}`;
 
   let html = `
   <html>
@@ -208,76 +224,63 @@ async function createLink(){
     <h2>${checklistData.title}</h2>
   `;
 
-  checklistData.steps.forEach((s,i)=>{
-
-    if(!s.text && !s.img && !s.audio) return;
-
-    html += `<div style="margin-bottom:20px;">`;
-
-    html += `<b>${i+1}. ${s.text||""}</b><br>`;
-
-    if(s.img){
-      html += `<img src="${s.img}" style="max-width:300px;"><br>`;
-    }
-
-    if(s.audio){
-      html += `<button onclick="new Audio('${s.audio}').play()">🔊 Spela</button><br>`;
-    }
-
-    html += `</div>`;
-  });
-
-  html += `</body></html>`;
-
-  // 🔥 STORLEKSKONTROLL (NY)
-  const size = new Blob([html]).size;
-
-  if(size > 900000){
-    alert(
-      "Checklistan är för stor.\n\n" +
-      "Detta händer när många bilder eller ljud används.\n\n" +
-      "Tips:\n- Ta bort några bilder/ljud\n- Eller skapa flera mindre checklistor"
-    );
-    return;
-  }
-
   try{
 
-    const res = await fetch(`https://api.github.com/repos/Sukrutaraj/checklist-pages/contents/${filename}`, {
-      method: "PUT",
-      headers: {
-        "Authorization": `token ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: "create checklist",
-        content: btoa(unescape(encodeURIComponent(html)))
-      })
-    });
+    for(let i=0;i<checklistData.steps.length;i++){
 
-    const data = await res.json();
+      const s = checklistData.steps[i];
 
-    if(data.content){
+      if(!s.text && !s.img && !s.audio) continue;
 
-      const url = `https://sukrutaraj.github.io/checklist-pages/${filename}`;
+      html += `<div style="margin-bottom:20px;">`;
+      html += `<b>${i+1}. ${s.text||""}</b><br>`;
 
-      await navigator.clipboard.writeText(url);
+      // 📷 BILD
+      if(s.img){
+        const imgName = `${basePath}-img-${i}.jpg`;
+        const base64 = s.img.split(",")[1];
 
-      alert(
-        "Länk skapad och kopierad!\n\n" +
-        url +
-        "\n\nOm sidan inte öppnas direkt:\nvänta 10–20 sek och försök igen."
-      );
+        await uploadFile(imgName, base64, token);
 
-      setTimeout(()=>{
-        window.open(url, "_blank");
-      }, 15000);
+        html += `<img src="https://sukrutaraj.github.io/checklist-pages/${imgName}" style="max-width:300px;"><br>`;
+      }
 
-    } else {
+      // 🔊 LJUD
+      if(s.audio){
+        const audioName = `${basePath}-audio-${i}.webm`;
+        const base64 = s.audio.split(",")[1];
 
-      alert("Fel:\n" + JSON.stringify(data, null, 2));
+        await uploadFile(audioName, base64, token);
 
+        html += `<button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/${audioName}').play()">🔊 Spela</button><br>`;
+      }
+
+      html += `</div>`;
     }
+
+    html += `</body></html>`;
+
+    const htmlName = `${basePath}.html`;
+
+    await uploadFile(
+      htmlName,
+      btoa(unescape(encodeURIComponent(html))),
+      token
+    );
+
+    const url = `https://sukrutaraj.github.io/checklist-pages/${htmlName}`;
+
+    await navigator.clipboard.writeText(url);
+
+    alert(
+      "Länk skapad och kopierad!\n\n" +
+      url +
+      "\n\nVänta 10–20 sek innan du öppnar."
+    );
+
+    setTimeout(()=>{
+      window.open(url, "_blank");
+    },15000);
 
   }catch(err){
     alert("Fel: " + err.message);
