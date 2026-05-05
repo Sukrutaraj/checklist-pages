@@ -118,12 +118,7 @@ button:active, .smallBtn:active {
 
 <div class="tool-row">
 
-  <div class="tool-btn" onclick="exportFiles()">
-    <div class="icon">📁</div>
-    <div class="label">Export (GitHub)</div>
-  </div>
-
-  <div class="tool-btn" onclick="downloadHTML()">
+   <div class="tool-btn" onclick="downloadHTML()">
     <div class="icon">📄</div>
     <div class="label">Ladda ner HTML</div>
   </div>
@@ -462,30 +457,6 @@ function playRec(i){
   if(checklistData.steps[i].audio){
     new Audio(checklistData.steps[i].audio).play();
   }
-}
-
-/* ===== EXPORT ===== */
-function exportFiles(){
-
-  alert("Laddar ner filer...");
-
-  let delay = 0;
-
-  checklistData.steps.forEach((step,i)=>{
-
-    if(step.img){
-      setTimeout(()=>download(step.img, `bild_${i+1}.jpg`), delay);
-      delay += 400;
-    }
-
-    if(step.audio){
-      setTimeout(()=>download(step.audio, `ljud_${i+1}.webm`), delay);
-      delay += 400;
-    }
-
-  });
-
-  setTimeout(downloadHTML, delay + 400);
 }
 
 /* ===== HTML ===== */
