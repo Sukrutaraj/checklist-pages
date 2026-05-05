@@ -236,26 +236,30 @@ async function createLink(){
       html += `<b>${i+1}. ${s.text||""}</b><br>`;
 
       // 📷 BILD
-      if(s.img){
-        const imgName = `${basePath}-img-${i}.jpg`;
-        const base64 = s.img.split(",")[1];
+     if(s.img){
 
-        await uploadFile(imgName, base64, token);
-        await new Promise(r => setTimeout(r, 300));
+  const imgName = `${basePath}-img-${i}.jpg`;
+  const base64 = s.img.split(",")[1];
 
-        html += `<img src="https://sukrutaraj.github.io/checklist-pages/${imgName}" style="max-width:300px;"><br>`;
-      }
+  await uploadFile(imgName, base64, token);
+  await new Promise(r => setTimeout(r, 300));
+
+  html += `<img src="https://sukrutaraj.github.io/checklist-pages/${imgName}" style="max-width:300px;"><br>`;
+
+}
 
       // 🔊 LJUD
       if(s.audio){
-        const audioName = `${basePath}-audio-${i}.webm`;
-        const base64 = s.audio.split(",")[1];
 
-        await uploadFile(imgName, base64, token);
-        await new Promise(r => setTimeout(r, 300));
+  const audioName = `${basePath}-audio-${i}.webm`;
+  const base64 = s.audio.split(",")[1];
 
-        html += `<button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/${audioName}').play()">🔊 Spela</button><br>`;
-      }
+  await uploadFile(audioName, base64, token);
+  await new Promise(r => setTimeout(r, 300));
+
+  html += `<button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/${audioName}').play()">🔊 Spela</button><br>`;
+
+}
 
       html += `</div>`;
     }
@@ -272,13 +276,22 @@ async function createLink(){
 
     const url = `https://sukrutaraj.github.io/checklist-pages/${htmlName}`;
 
-    await navigator.clipboard.writeText(url);
+  let copied = false;
 
-    alert(
-      "Länk skapad och kopierad!\n\n" +
-      url +
-      "\n\nVänta 10–20 sek innan du öppnar."
-    );
+try{
+  await navigator.clipboard.writeText(url);
+  copied = true;
+}catch(e){
+  copied = false;
+}
+
+alert(
+  "Länk skapad!\n\n" +
+  url +
+  "\n\n" +
+  (copied ? "✔ Kopierad till urklipp" : "⚠️ Kunde inte kopiera automatiskt") +
+  "\n\nVänta 10–20 sek innan du öppnar."
+);
 
     setTimeout(()=>{
       window.open(url, "_blank");
