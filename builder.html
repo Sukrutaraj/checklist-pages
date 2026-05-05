@@ -241,6 +241,7 @@ async function createLink(){
         const base64 = s.img.split(",")[1];
 
         await uploadFile(imgName, base64, token);
+        await new Promise(r => setTimeout(r, 300));
 
         html += `<img src="https://sukrutaraj.github.io/checklist-pages/${imgName}" style="max-width:300px;"><br>`;
       }
@@ -250,7 +251,8 @@ async function createLink(){
         const audioName = `${basePath}-audio-${i}.webm`;
         const base64 = s.audio.split(",")[1];
 
-        await uploadFile(audioName, base64, token);
+        await uploadFile(imgName, base64, token);
+        await new Promise(r => setTimeout(r, 300));
 
         html += `<button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/${audioName}').play()">🔊 Spela</button><br>`;
       }
