@@ -182,33 +182,82 @@ async function createLink(){
   const hasContent = checklistData.steps.some(s => s.text || s.img || s.audio);
 
   if(!checklistData.title && !hasContent){
-    alert("Checklistan är tom. Lägg till minst ett steg.");
+    alert("Checklistan är tom.");
     return;
   }
 
-  alert("Skickar till server...");
+  const token = prompt("Klistra in din GitHub token:");
+
+  if(!token){
+    alert("Ingen token angiven");
+    return;
+  }
+
+  const filename = `checklist-${Date.now()}.html`;
+
+  let html = `
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>${checklistData.title}</title>
+  </head>
+  <body style="font-family:sans-serif;padding:20px;">
+    <h2>${checklistData.title}</h2>
+  `;
+
+  checklistData.steps.forEach((s,i)=>{
+
+    if(!s.text && !s.img && !s.audio) return;
+
+    html += `<div style="margin-bottom:20px;">`;
+
+    html += `<b>${i+1}. ${s.text||""}</b><br>`;
+
+    if(s.img){
+      html += `<img src="${s.img}" style="max-width:300px;"><br>`;
+    }
+
+    if(s.audio){
+      html += `<button onclick="new Audio('${s.audio}').play()">🔊 Spela</button><br>`;
+    }
+
+    html += `</div>`;
+  });
+
+  html += `</body></html>`;
 
   try{
-    const res = await fetch("https://checklist-pages-1zm2jo14o-sukrutarajs-projects.vercel.app/api/create", {
-      method:"POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify(checklistData)
+
+    const res = await fetch(`https://api.github.com/repos/Sukrutaraj/checklist-pages/contents/${filename}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: "create checklist",
+        content: btoa(unescape(encodeURIComponent(html)))
+      })
     });
 
     const data = await res.json();
 
-    if(data.url){
+    if(data.content){
 
-      await navigator.clipboard.writeText(data.url);
+      const url = `https://sukrutaraj.github.io/checklist-pages/${filename}`;
 
-      alert("Länk skapad och kopierad!\n\n" + data.url);
+      await navigator.clipboard.writeText(url);
+
+      alert("Länk skapad!\n(Kopierad)\n\n" + url);
 
     } else {
+
       alert("Fel:\n" + JSON.stringify(data, null, 2));
+
     }
 
   }catch(err){
-    alert("Fetch error: " + err.message);
+    alert("Fel: " + err.message);
   }
 }
 
