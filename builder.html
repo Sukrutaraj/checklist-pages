@@ -186,11 +186,14 @@ async function createLink(){
     return;
   }
 
-  const token = prompt("Klistra in din GitHub token:");
+  // 🔐 fråga efter token
+  let token = localStorage.getItem("gh_token");
 
   if(!token){
-    alert("Ingen token angiven");
-    return;
+    token = prompt("Klistra in din GitHub token:");
+    if(!token) return;
+
+    localStorage.setItem("gh_token", token);
   }
 
   const filename = `checklist-${Date.now()}.html`;
@@ -248,7 +251,7 @@ async function createLink(){
 
       await navigator.clipboard.writeText(url);
 
-      alert("Länk skapad!\n(Kopierad)\n\n" + url);
+      alert("Länk skapad och kopierad!\n\n" + url);
 
     } else {
 
@@ -260,7 +263,7 @@ async function createLink(){
     alert("Fel: " + err.message);
   }
 }
-
+  
 /* ===== DATA ===== */
 function updateData(){
   checklistData.title = document.getElementById("title").value;
