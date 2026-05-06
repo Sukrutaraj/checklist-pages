@@ -411,7 +411,12 @@ function render(){
 
       <br>
 
-      <button class="smallBtn" onclick="removeStep(${i})">🗑</button>
+      <div>
+  <button class="smallBtn" onclick="moveUp(${i})">🔼</button>
+  <button class="smallBtn" onclick="moveDown(${i})">🔽</button>
+  <button class="smallBtn" onclick="removeStep(${i})">🗑</button>
+</div>
+      
     `;
 
     container.appendChild(div);
@@ -429,6 +434,26 @@ function removeStep(i){
   render();
 }
 
+function moveUp(i){
+  if(i === 0) return;
+
+  const temp = checklistData.steps[i];
+  checklistData.steps[i] = checklistData.steps[i-1];
+  checklistData.steps[i-1] = temp;
+
+  render();
+}
+
+function moveDown(i){
+  if(i === checklistData.steps.length - 1) return;
+
+  const temp = checklistData.steps[i];
+  checklistData.steps[i] = checklistData.steps[i+1];
+  checklistData.steps[i+1] = temp;
+
+  render();
+}
+  
 /* ===== IMAGE (komprimering) ===== */
 function loadImage(e,i){
   const file = e.target.files[0];
