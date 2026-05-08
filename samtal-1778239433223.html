@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Samtalsyta</title>
+<style>
+
+body{
+font-family:sans-serif;
+background:#f5f5f5;
+text-align:center;
+padding:20px;
+max-width:900px;
+margin:auto;
+}
+
+.section{
+background:white;
+padding:15px;
+margin:10px auto;
+border-radius:12px;
+max-width:700px;
+}
+
+#runPanel{display:none;}
+
+.grid{
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:20px;
+}
+
+.choice{
+width:22vw;
+height:22vw;
+max-width:150px;
+max-height:150px;
+min-width:90px;
+min-height:90px;
+
+border-radius:20px;
+font-size:clamp(16px,2.5vw,28px);
+
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+cursor:pointer;
+}
+
+.choice img{
+max-height:60px;
+margin-bottom:6px;
+}
+
+.yes{background:#4CAF50;}
+.no{background:#F44336;}
+.maybe{background:orange;}
+.scale{background:#607D8B;color:white;}
+
+.active{outline:6px solid white;}
+
+.next{
+background:#1976D2;
+color:white;
+padding:16px 26px;
+border:none;
+border-radius:10px;
+font-size:20px;
+margin-top:20px;
+cursor:pointer;
+}
+
+.choicePreview{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px;
+background:#fafafa;
+margin:8px 0;
+border-radius:10px;
+}
+
+.smallBtn{
+background:#eee;
+padding:6px 10px;
+border-radius:6px;
+cursor:pointer;
+margin-left:5px;
+}
+
+.tool-row{
+display:flex;
+justify-content:center;
+gap:30px;
+margin-top:10px;
+flex-wrap:wrap;
+}
+
+.tool-btn{
+display:flex;
+flex-direction:column;
+align-items:center;
+cursor:pointer;
+}
+
+.tool-btn .icon{
+width:70px;
+height:70px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+border:2px solid #333;
+font-size:28px;
+background:white;
+}
+
+.tool-btn .label{
+margin-top:6px;
+font-size:13px;
+}
+
+</style>
+</head>
+<body>
+
+<div id="runPanel" style="display:block;">
+<h2 id="q"></h2>
+<img id="img" style="max-width:300px"><br>
+<div id="choices" class="grid"></div>
+<button class="next" onclick="nextQ()">Nästa</button>
+</div>
+
+<script>
+
+let choices = {"v1":{"text":"Ja","emoji":"👍"},"v2":{"text":"Vet ej","emoji":"🤷"},"v3":{"text":"Nej","emoji":"👎"}};
+let choiceImgs = {};
+let scaleMax = 5;
+let questions = [{"text":"Vad tycker du om att Skriva historier på datorn?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1778239433223-q-0.jpg"},{"text":"Vad tycker du om skapa quiz till dina vänner?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1778239433223-q-1.jpg"},{"text":"Vad tycker du om att vara på Stallet?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1778239433223-q-2.jpg"},{"text":"Vad tycker du om Forum teater?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1778239433223-q-3.jpg"},{"text":"Vad tycker du om spela Teater framför en publik?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1778239433223-q-4.jpg"},{"text":"Gillar du din arbetsvecka på Diabasen?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1778239433223-q-5.jpg"}];
+let current = 0;
+let selected = null;
+let answers = [];
+
+function playClick(){
+  const click = new Audio("https://sukrutaraj.github.io/checklist-pages/klick.m4a");
+  click.currentTime = 0;
+  click.play();
+}
+
+function speak(t){
+  speechSynthesis.cancel();
+
+  let msg = new SpeechSynthesisUtterance(t);
+  msg.lang = "sv-SE";
+
+  speechSynthesis.speak(msg);
+}
+
+function render(){
+
+  if(!questions || !questions.length){
+    document.body.innerHTML="<h2>Inga frågor</h2>";
+    return;
+  }
+
+  if(current >= questions.length){
+ document.body.innerHTML="<h2>Klar!</h2>";
+ return;
+}
+
+  const qEl = document.getElementById("q");
+  const imgEl = document.getElementById("img");
+
+  qEl.innerText = questions[current].text;
+  imgEl.src = questions[current].img || "";
+
+  let mode = "yesno";
+  if(!mode) mode = "yesnomaybe";
+
+  const c = document.getElementById("choices");
+  c.innerHTML = "";
+
+  function createBtn(label,type,text){
+    let b = document.createElement("div");
+    b.className = "choice " + type;
+    b.innerHTML = label;
+
+    b.onclick = function(){
+
+  selected = text;
+
+  document.querySelectorAll(".choice")
+    .forEach(x=>x.classList.remove("active"));
+
+  b.classList.add("active");
+
+  playClick();
+
+  setTimeout(()=>{
+    speak(text);
+  },120);
+
+};
+
+    c.appendChild(b);
+  }
+
+  if(mode==="yesnomaybe"){
+    createBtn(choiceImgs.v1?'<img src="'+choiceImgs.v1+'">':choices.v1.emoji+"<br>"+choices.v1.text,"yes",choices.v1.text);
+    createBtn(choiceImgs.v2?'<img src="'+choiceImgs.v2+'">':choices.v2.emoji+"<br>"+choices.v2.text,"maybe",choices.v2.text);
+    createBtn(choiceImgs.v3?'<img src="'+choiceImgs.v3+'">':choices.v3.emoji+"<br>"+choices.v3.text,"no",choices.v3.text);
+  }
+
+  if(mode==="yesno"){
+    createBtn(choiceImgs.v1?'<img src="'+choiceImgs.v1+'">':choices.v1.emoji+"<br>"+choices.v1.text,"yes",choices.v1.text);
+    createBtn(choiceImgs.v3?'<img src="'+choiceImgs.v3+'">':choices.v3.emoji+"<br>"+choices.v3.text,"no",choices.v3.text);
+  }
+}
+
+function nextQ(){
+ if(!selected)return;
+ selected=null;
+ current++;
+ render();
+}
+
+render();
+
+</script>
+
+</body>
+</html>
