@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='sv'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Digitala hjälpmedel</title>
+<style>
+body{font-family:sans-serif;background:#f2f2f2;padding:20px;max-width:960px;margin:auto;}
+h1{text-align:center;margin-bottom:20px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;}
+.cell{background:white;border-radius:14px;padding:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;}
+.cell:active{transform:scale(0.96);box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+.cell img{width:100%;max-height:120px;object-fit:contain;border-radius:10px;display:block;margin:0 auto;}
+.cell p{margin:10px 0 0;font-size:15px;font-weight:600;color:#333;}
+.selected{outline:4px solid #4CAF50;}
+</style>
+</head>
+<body>
+<h1>Digitala hjälpmedel</h1>
+<div class='grid' id='grid'></div>
+<script>
+var slots = [{"alt":"Spel som motivation","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-0.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-0.webm"},{"alt":"Välja själv vad man vill göra","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-1.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-1.webm"},{"alt":"Checklistor för självständighet","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-2.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-2.webm"},{"alt":"Lära sig tillsammans","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-3.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-3.webm"},{"alt":"Säga vad man tycker","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-4.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-4.webm"},{"alt":"Grupp aktiviteter","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-5.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-5.webm"},{"alt":"Lära sig språl och bygga ordförråd","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-6.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-6.webm"},{"alt":"Ha koll på sin dag/vecka","imgUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-img-7.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/aktivitetsval-1778836462316-audio-7.webm"}];
+var selected = null;
+function render(){
+  var grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  slots.forEach(function(s, i){
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.id = 'cell-' + i;
+    var html = '';
+    if(s.imgUrl) html += '<img src="' + s.imgUrl + '" alt="' + s.alt + '">';
+    html += '<p>' + s.alt + '</p>';
+    cell.innerHTML = html;
+    cell.onclick = function(){
+      document.querySelectorAll('.cell').forEach(function(c){ c.classList.remove('selected'); });
+      cell.classList.add('selected');
+      selected = s;
+      if(s.audioUrl){ var a = new Audio(s.audioUrl); a.play(); }
+    };
+    grid.appendChild(cell);
+  });
+}
+render();
+</script>
+</body>
+</html>
