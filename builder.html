@@ -160,20 +160,19 @@ let stream = null;
 let recorder = null;
 let chunks = [];
 
-/* ===== UPLOAD ===== */
-async function uploadFile(path, content, token){
+/* ===== UPLOAD VIA VERCEL ===== */
+async function uploadFile(path, content, repo) {
   const res = await fetch(
-    "https://api.github.com/repos/Sukrutaraj/checklist-pages/contents/" + path,
+    "https://upload-api-kappa.vercel.app/api/upload",
     {
-      method: "PUT",
-      headers: {
-        "Authorization": "token " + token,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ message: "upload file", content: content })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path, content, repo })
     }
   );
-  return await res.json();
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Upload failed");
+  return data;
 }
 
 /* ===== CLICK FEEDBACK ===== */
@@ -203,15 +202,9 @@ async function createLink(){
     return;
   }
 
-  let token = localStorage.getItem("gh_token");
-  if(!token){
-    token = prompt("Klistra in din GitHub token:");
-    if(!token) return;
-    localStorage.setItem("gh_token", token);
-  }
-
   const id = Date.now();
   const basePath = "checklist-" + id;
+  const repo = "Sukrutaraj/checklist-pages";
 
   try {
 
@@ -229,7 +222,7 @@ async function createLink(){
       if(s.img){
         const imgName = basePath + "-img-" + i + ".jpg";
         const base64 = s.img.split(",")[1];
-        await uploadFile(imgName, base64, token);
+        await uploadFile(imgName, base64, repo);
         await new Promise(r=>setTimeout(r,300));
         stepContent += "<img src='https://sukrutaraj.github.io/checklist-pages/" + imgName + "'><br>";
       }
@@ -237,7 +230,7 @@ async function createLink(){
       if(s.audio){
         const audioName = basePath + "-audio-" + i + ".webm";
         const base64 = s.audio.split(",")[1];
-        await uploadFile(audioName, base64, token);
+        await uploadFile(audioName, base64, repo);
         await new Promise(r=>setTimeout(r,300));
         stepContent += "<button onclick=\"new Audio('https://sukrutaraj.github.io/checklist-pages/" + audioName + "').play()\">🔊 Spela</button>";
       }
@@ -311,7 +304,7 @@ async function createLink(){
     await uploadFile(
       htmlName,
       btoa(unescape(encodeURIComponent(sharedHtml))),
-      token
+      repo
     );
 
     const url = "https://sukrutaraj.github.io/checklist-pages/" + htmlName;
