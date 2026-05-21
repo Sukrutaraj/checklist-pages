@@ -305,17 +305,7 @@ async function createLink(){
       "<script>",
       scriptLines,
       "<" + "/script>",
-      "
-<div id="qr-modal">
-  <div class="qr-box">
-    <div class="qr-heading" id="qr-h"></div>
-    <div class="qr-url" id="qr-u"></div>
-    <canvas id="qr-canvas" width="200" height="200"></canvas><br>
-    <button class="qr-dl" onclick="dlQRpdf()">⬇️ Ladda ner PDF</button>
-    <button class="qr-cl" onclick="document.getElementById('qr-modal').classList.remove('on')">Stäng</button>
-  </div>
-</div>
-</body>",
+      "</body>",
       "</html>"
     ].join("\n");
 
@@ -572,13 +562,13 @@ function showQR(url, title) {
   ctx.clearRect(0,0,200,200);
   function doQR() {
     var div = document.createElement('div');
-    new QRCode(div, {text:url, width:200, height:200, colorDark:'#000', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M});
+    new QRCode(div, {text:url,width:200,height:200,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
     setTimeout(function(){
       var el = div.querySelector('canvas') || div.querySelector('img');
       if(!el) return;
       if(el.tagName==='CANVAS'){ ctx.drawImage(el,0,0,200,200); }
       else { var i=new Image(); i.onload=function(){ctx.drawImage(i,0,0,200,200);}; i.src=el.src; }
-    }, 300);
+    }, 400);
   }
   if(typeof QRCode==='undefined'){
     var s=document.createElement('script');
@@ -591,25 +581,38 @@ function dlQRpdf() {
   var title = document.getElementById('qr-h').textContent;
   var url   = document.getElementById('qr-u').textContent;
   var canvas = document.getElementById('qr-canvas');
-  function build(jsPDFLib) {
-    var doc = new jsPDFLib({orientation:'portrait',unit:'mm',format:'a4'});
+  function build(Lib) {
+    var doc = new Lib({orientation:'portrait',unit:'mm',format:'a4'});
     var W = doc.internal.pageSize.getWidth();
     doc.setFontSize(22); doc.setFont('helvetica','bold');
     doc.text(title, W/2, 30, {align:'center'});
-    var qrSize=100, qrX=(W-qrSize)/2;
-    doc.addImage(canvas.toDataURL('image/png'),'PNG',qrX,45,qrSize,qrSize);
+    var sz=100, x=(W-sz)/2;
+    doc.addImage(canvas.toDataURL('image/png'),'PNG',x,45,sz,sz);
     doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100);
     doc.text(url, W/2, 158, {align:'center', maxWidth:W-30});
-    doc.save((title.replace(/[^a-zA-Z0-9]/g,'_')||'qrkod')+'_QR.pdf');
+    doc.save((title.replace(/[^a-zA-Z0-9 ]/g,'_')||'qrkod')+'_QR.pdf');
   }
-  if(typeof jsPDF!=='undefined'){ build(jsPDF); return; }
-  if(typeof window.jspdf!=='undefined'){ build(window.jspdf.jsPDF); return; }
-  var s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  s.onload=function(){ build(window.jspdf ? window.jspdf.jsPDF : jsPDF); };
-  document.head.appendChild(s);
+  function load(cb){
+    if(typeof jsPDF!=='undefined'){cb(jsPDF);return;}
+    if(window.jspdf){cb(window.jspdf.jsPDF);return;}
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=function(){cb(window.jspdf?window.jspdf.jsPDF:jsPDF);};
+    document.head.appendChild(s);
+  }
+  load(build);
 }
 </script>
 
+
+<div id="qr-modal">
+  <div class="qr-box">
+    <div class="qr-heading" id="qr-h"></div>
+    <div class="qr-url" id="qr-u"></div>
+    <canvas id="qr-canvas" width="200" height="200"></canvas><br>
+    <button class="qr-dl" onclick="dlQRpdf()">&#11015;&#65039; Ladda ner PDF</button>
+    <button class="qr-cl" onclick="document.getElementById('qr-modal').classList.remove('on')">Stang</button>
+  </div>
+</div>
 </body>
 </html>
