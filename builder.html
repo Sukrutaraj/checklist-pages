@@ -331,6 +331,8 @@ async function createLink(){
     try{ await navigator.clipboard.writeText(url); copied = true; }catch(e){}
 
     document.getElementById('link-spinner').classList.remove('on');
+    document.getElementById('qr-copied').textContent = copied ? '✔ Länken är kopierad till urklipp' : '⚠️ Kopiera länken manuellt';
+    document.getElementById('qr-copied').style.color = copied ? '#4CAF50' : '#e67e22';
     showQR(url, checklistData.title || 'Länk skapad');
 
   }catch(err){
@@ -623,7 +625,8 @@ function dlQRpdf() {
     <div class="qr-url" id="qr-u"></div>
     <canvas id="qr-canvas" width="200" height="200"></canvas><br>
     <button class="qr-dl" onclick="dlQRpdf()">&#11015;&#65039; Ladda ner PDF</button>
-    <button class="qr-cl" onclick="document.getElementById('qr-modal').classList.remove('on')">Stang</button>
+    <div id="qr-copied" style="font-size:12px;margin-bottom:10px;"></div>
+    <button class="qr-cl" onclick="document.getElementById('qr-modal').classList.remove('on')">Stäng</button>
   </div>
 </div>
 </body>
