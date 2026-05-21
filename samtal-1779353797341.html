@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang='sv'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>
+<title>Samtalsyta</title>
+<style>
+body{font-family:sans-serif;background:#f5f5f5;text-align:center;padding:20px;max-width:900px;margin:auto;}
+.grid{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;}
+.choice{width:22vw;height:22vw;max-width:150px;max-height:150px;min-width:90px;min-height:90px;border-radius:20px;font-size:clamp(16px,2.5vw,28px);display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;transition:transform 0.1s;}
+.choice:active{transform:scale(0.95);}
+.choice img{max-height:60px;margin-bottom:6px;}
+.yes{background:#4CAF50;color:white;}.no{background:#F44336;color:white;}.maybe{background:orange;color:white;}.scale{background:#607D8B;color:white;}
+.active{outline:6px solid white;box-shadow:0 0 0 3px #333;}
+.next{background:#1976D2;color:white;padding:16px 26px;border:none;border-radius:10px;font-size:20px;margin-top:20px;cursor:pointer;}
+.next:hover{background:#1565C0;}
+#resultPanel{display:none;}
+.result-list{list-style:none;padding:0;margin:16px auto;max-width:600px;text-align:left;}
+.result-item{background:white;border-radius:12px;padding:14px 18px;margin:8px 0;display:flex;align-items:center;gap:14px;font-size:18px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.result-badge{min-width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;font-weight:bold;}
+.badge-yes{background:#4CAF50;}.badge-no{background:#F44336;}.badge-maybe{background:orange;}.badge-num{background:#607D8B;}
+.result-question{flex:1;}.result-answer{font-weight:bold;}
+.result-summary{background:white;border-radius:16px;padding:20px;margin:16px auto;max-width:600px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:10px;}
+.summary-box{display:flex;flex-direction:column;align-items:center;padding:10px 20px;border-radius:12px;min-width:80px;}
+.summary-count{font-size:36px;font-weight:bold;color:white;}.summary-label{font-size:14px;color:white;margin-top:4px;}
+.btn-download{background:#388E3C;color:white;padding:14px 28px;border:none;border-radius:10px;font-size:18px;margin:8px;cursor:pointer;}
+.btn-download:hover{background:#2E7D32;}
+.btn-restart{background:#757575;color:white;padding:14px 28px;border:none;border-radius:10px;font-size:18px;margin:8px;cursor:pointer;}
+.progress-bar-wrap{background:#ddd;border-radius:10px;height:10px;max-width:400px;margin:10px auto;overflow:hidden;}
+.progress-bar-fill{height:100%;background:#1976D2;border-radius:10px;transition:width 0.3s;}
+.question-counter{font-size:14px;color:#888;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div id='runPanel'>
+  <div class='question-counter' id='questionCounter'></div>
+  <div class='progress-bar-wrap'><div class='progress-bar-fill' id='progressFill' style='width:0%'></div></div>
+  <h2 id='q'></h2>
+  <img id='img' style='max-width:300px;border-radius:12px;'><br>
+  <div id='choices' class='grid'></div>
+  <button class='next' onclick='nextQ()'>Nästa ➡️</button>
+</div>
+<div id='resultPanel'>
+  <h2>✅ Resultat</h2>
+  <div class='result-summary' id='resultSummary'></div>
+  <ul class='result-list' id='resultList'></ul>
+  <div style='margin-top:20px;'>
+    <button class='btn-download' onclick='downloadResults()'>⬇️ Ladda ner resultat</button>
+    <button class='btn-restart' onclick='restartSession()'>🔄 Börja om</button>
+  </div>
+</div>
+<script>
+var choices    = {"v1":{"text":"Ja","emoji":"👍"},"v2":{"text":"Vet ej","emoji":"🤷"},"v3":{"text":"Nej","emoji":"👎"}};
+var choiceImgs = {};
+var scaleMax   = 5;
+var questions  = [{"text":"Vad tycker du om VR upplevelser?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1779353797341-q-0.jpg"},{"text":"Vad tycker du om 3D modellering?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1779353797341-q-1.jpg"},{"text":"Vad tycker du om att fota och filma?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1779353797341-q-2.jpg"},{"text":"Vad tycker du om film redigering?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1779353797341-q-3.jpg"},{"text":"Vad tycker du om e-sport?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1779353797341-q-4.jpg"},{"text":"Vad tycker du om poddsamtal?","img":"https://sukrutaraj.github.io/checklist-pages/samtal-1779353797341-q-5.jpg"}];
+var mode       = "scale";
+var current    = 0;
+var selected   = null;
+var answers    = [];
+
+var colorMap = {};
+colorMap[choices.v1.text] = '#4CAF50';
+colorMap[choices.v2.text] = 'orange';
+colorMap[choices.v3.text] = '#F44336';
+
+function playClick(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var osc=ctx.createOscillator();var gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=600;
+    gain.gain.setValueAtTime(0.3,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);
+    osc.start();osc.stop(ctx.currentTime+0.15);
+  }catch(e){}
+}
+
+function speak(t){
+  speechSynthesis.cancel();
+  var msg=new SpeechSynthesisUtterance(t);
+  msg.lang='sv-SE';
+  speechSynthesis.speak(msg);
+}
+
+function render(){
+  if(current>=questions.length){showResults();return;}
+  var q=questions[current];
+  var pct=Math.round((current/questions.length)*100);
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('questionCounter').textContent='Fråga '+(current+1)+' av '+questions.length;
+  document.getElementById('q').innerText=q.text;
+  var imgEl=document.getElementById('img');
+  imgEl.src=q.img||'';imgEl.style.display=q.img?'inline':'none';
+  selected=null;
+  var c=document.getElementById('choices');c.innerHTML='';
+  function createBtn(label,type,text){
+    var b=document.createElement('div');
+    b.className='choice '+type;b.innerHTML=label;
+    b.onclick=function(){
+      selected=text;
+      document.querySelectorAll('.choice').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      playClick();
+      setTimeout(function(){speak(text);},120);
+    };
+    c.appendChild(b);
+  }
+  if(mode==='yesnomaybe'){
+    createBtn(choiceImgs.v1?'<img src="'+choiceImgs.v1+'">':choices.v1.emoji+'<br>'+choices.v1.text,'yes',choices.v1.text);
+    createBtn(choiceImgs.v2?'<img src="'+choiceImgs.v2+'">':choices.v2.emoji+'<br>'+choices.v2.text,'maybe',choices.v2.text);
+    createBtn(choiceImgs.v3?'<img src="'+choiceImgs.v3+'">':choices.v3.emoji+'<br>'+choices.v3.text,'no',choices.v3.text);
+  }
+  if(mode==='yesno'){
+    createBtn(choiceImgs.v1?'<img src="'+choiceImgs.v1+'">':choices.v1.emoji+'<br>'+choices.v1.text,'yes',choices.v1.text);
+    createBtn(choiceImgs.v3?'<img src="'+choiceImgs.v3+'">':choices.v3.emoji+'<br>'+choices.v3.text,'no',choices.v3.text);
+  }
+  if(mode==='scale'){
+    for(var n=1;n<=scaleMax;n++){createBtn(String(n),'scale',String(n));}
+  }
+}
+
+function nextQ(){
+  if(!selected){alert('Välj ett svar först!');return;}
+  answers.push({q:questions[current].text,a:selected});
+  selected=null;current++;render();
+}
+
+function showResults(){
+  document.getElementById('runPanel').style.display='none';
+  document.getElementById('resultPanel').style.display='block';
+  var counts={};
+  answers.forEach(function(x){counts[x.a]=(counts[x.a]||0)+1;});
+  var summary=document.getElementById('resultSummary');summary.innerHTML='';
+  Object.entries(counts).forEach(function(entry){
+    var ans=entry[0];var count=entry[1];
+    var color=colorMap[ans]||'#607D8B';
+    summary.innerHTML+='<div class="summary-box" style="background:'+color+'"><div class="summary-count">'+count+'</div><div class="summary-label">'+ans+'</div></div>';
+  });
+  var list=document.getElementById('resultList');list.innerHTML='';
+  answers.forEach(function(item,i){
+    var color=colorMap[item.a]||'#607D8B';
+    var bc=item.a===choices.v1.text?'badge-yes':item.a===choices.v3.text?'badge-no':item.a===choices.v2.text?'badge-maybe':'badge-num';
+    list.innerHTML+='<li class="result-item"><div class="result-badge '+bc+'">'+item.a.charAt(0)+'</div><div class="result-question"><span style="color:#888;font-size:14px;">Fråga '+(i+1)+'</span><br>'+item.q+'</div><div class="result-answer" style="color:'+color+'">'+item.a+'</div></li>';
+  });
+}
+
+function downloadResults(){
+  var now=new Date();
+  var datum=now.toLocaleDateString('sv-SE');
+  var tid=now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+  var counts={};
+  answers.forEach(function(x){counts[x.a]=(counts[x.a]||0)+1;});
+  var content='DIGITAL SAMTALSYTA - RESULTAT\n================================\n';
+  content+='Datum: '+datum+'  Tid: '+tid+'\n';
+  content+='Antal frågor: '+answers.length+'\n\n';
+  content+='SAMMANFATTNING\n--------------\n';
+  Object.entries(counts).forEach(function(e){content+=e[0]+': '+e[1]+' gang'+(e[1]!==1?'er':'')+'\n';});
+  content+='\nDETALJERADE SVAR\n----------------\n';
+  answers.forEach(function(item,i){content+='\nFråga '+(i+1)+': '+item.q+'\nSvar: '+item.a+'\n';});
+  var blob=new Blob([content],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='samtalsyta-resultat-'+datum.replace(/\//g,'-')+'.txt';a.click();
+}
+
+function restartSession(){
+  answers=[];current=0;selected=null;
+  document.getElementById('resultPanel').style.display='none';
+  document.getElementById('runPanel').style.display='block';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
