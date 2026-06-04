@@ -160,6 +160,11 @@ button:active, .smallBtn:active {
     <div class="label">Skapa länk</div>
   </div>
 
+  <div class="tool-btn" onclick="downloadPDF()">
+    <div class="icon">🖨️</div>
+    <div class="label">Skriv ut PDF</div>
+  </div>
+
 </div>
 
 <br>
@@ -613,6 +618,79 @@ function dlQRpdf() {
     document.head.appendChild(s);
   }
   load(build);
+}
+
+/* ===== LADDA NER PDF ===== */
+function downloadPDF(){
+  updateData();
+  if(!checklistData.title && !checklistData.steps.some(s=>s.text||s.img)){
+    alert("Checklistan är tom.");return;
+  }
+  function getImgDims(dataUrl,maxW,maxH){
+    return new Promise(function(resolve){
+      var img=new Image();
+      img.onload=function(){
+        var w=img.naturalWidth,h=img.naturalHeight,ratio=w/h;
+        if(w>maxW){w=maxW;h=w/ratio;}
+        if(h>maxH){h=maxH;w=h*ratio;}
+        resolve({w:Math.round(w),h:Math.round(h)});
+      };
+      img.onerror=function(){resolve({w:maxW,h:maxH});};
+      img.src=dataUrl;
+    });
+  }
+  function buildPDF(Lib){
+    var doc=new Lib({orientation:"portrait",unit:"mm",format:"a4"});
+    var pageW=doc.internal.pageSize.getWidth();
+    var pageH=doc.internal.pageSize.getHeight();
+    var margin=15,contentW=pageW-margin*2,y=margin;
+    // Titel
+    doc.setFillColor(245,245,245);
+    doc.rect(0,0,pageW,22,"F");
+    doc.setFontSize(18);doc.setFont("helvetica","bold");doc.setTextColor(40,40,40);
+    doc.text(checklistData.title||"Checklista",pageW/2,14,{align:"center"});
+    y=28;
+    var steps=checklistData.steps.filter(function(s){return s.text||s.img;});
+    var dimPromises=steps.map(function(s){
+      if(!s.img)return Promise.resolve(null);
+      return getImgDims(s.img,50,45);
+    });
+    Promise.all(dimPromises).then(function(dims){
+      for(var i=0;i<steps.length;i++){
+        var s=steps[i],dim=dims[i];
+        var imgH=dim?dim.h:0;
+        var textLines=s.text?doc.splitTextToSize((i+1)+". "+s.text,contentW-22):[];
+        var blockH=Math.max(imgH,textLines.length*7)+12;
+        if(y+blockH>pageH-margin){doc.addPage();y=margin;}
+        // Checkbox
+        doc.setDrawColor(80,80,80);doc.setLineWidth(0.5);
+        doc.roundedRect(margin,y+2,8,8,1,1);
+        // Bild
+        if(s.img&&dim){
+          try{doc.addImage(s.img,"JPEG",margin+12,y,dim.w,dim.h);}catch(e){}
+        }
+        // Text
+        if(textLines.length>0){
+          var tx=dim?margin+12+dim.w+4:margin+12;
+          doc.setFontSize(12);doc.setFont("helvetica","normal");doc.setTextColor(40,40,40);
+          doc.text(textLines,tx,y+8);
+        }
+        y+=blockH;
+        doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);
+        doc.line(margin,y-2,pageW-margin,y-2);
+      }
+      doc.setFontSize(8);doc.setTextColor(160,160,160);
+      doc.text("Daglig Verksamhet – Digital Aktivitets-checklista",pageW/2,pageH-8,{align:"center"});
+      var name=(checklistData.title||"checklista").replace(/[^a-zA-Z0-9 ]/g,"_");
+      doc.save(name+".pdf");
+    });
+  }
+  if(typeof jsPDF!=="undefined"){buildPDF(jsPDF);return;}
+  if(window.jspdf){buildPDF(window.jspdf.jsPDF);return;}
+  var s=document.createElement("script");
+  s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  s.onload=function(){buildPDF(window.jspdf?window.jspdf.jsPDF:jsPDF);};
+  document.head.appendChild(s);
 }
 </script>
 
