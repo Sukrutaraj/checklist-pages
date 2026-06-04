@@ -1,0 +1,711 @@
+<!--
+⚠️ STABLE VERSION - DO NOT MODIFY
+Ändringar ska göras i builder-dev.html
+-->
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Aktivitets-checklista</title>
+
+<style>
+body{
+  font-family:sans-serif;
+  background:#f5f5f5;
+  text-align:center;
+  padding:20px;
+  max-width:900px;
+  margin:auto;
+}
+
+.section{
+  background:white;
+  padding:12px;
+  margin:10px auto;
+  border-radius:12px;
+}
+
+input{
+  width:90%;
+  padding:8px;
+  margin:6px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+.step{
+  border:1px solid #eee;
+  border-radius:10px;
+  padding:10px;
+  margin:8px 0;
+}
+
+img{
+  max-height:100px;
+  margin-top:6px;
+  border-radius:8px;
+}
+
+.smallBtn{
+  background:#eee;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  margin:3px;
+  border:none;
+}
+
+.tool-row{
+  display:flex;
+  justify-content:center;
+  gap:25px;
+  margin-top:15px;
+  flex-wrap:wrap;
+}
+
+.tool-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  cursor:pointer;
+}
+
+.tool-btn .icon{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #333;
+  font-size:26px;
+  background:white;
+}
+
+.tool-btn .label{
+  margin-top:6px;
+  font-size:13px;
+}
+
+#preview{
+  display:none;
+  text-align:left;
+}
+
+button, .smallBtn {
+  transition: all 0.1s ease;
+}
+
+button:active, .smallBtn:active {
+  transform: scale(0.95);
+  background:#ddd;
+}
+
+.tool-btn:active .icon {
+  transform: scale(0.92);
+  background:#eee;
+}
+
+/* QR modal */
+#qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;}
+#qr-modal.on{display:flex;}
+.qr-box{background:#fff;border-radius:20px;padding:28px 24px;text-align:center;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+.qr-heading{font-size:16px;font-weight:700;color:#333;margin-bottom:4px;}
+.qr-url{font-size:11px;color:#999;margin-bottom:14px;word-break:break-all;}
+#qr-canvas{border-radius:8px;margin-bottom:14px;}
+.qr-dl{padding:10px 22px;background:#4CAF50;color:#fff;border:none;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;margin:4px;}
+.qr-cl{padding:10px 22px;background:#eee;color:#333;border:none;border-radius:50px;font-size:14px;cursor:pointer;margin:4px;}
+
+/* Spinner */
+#link-spinner{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;align-items:center;justify-content:center;}
+#link-spinner.on{display:flex;}
+.sp-ring{width:54px;height:54px;border:6px solid rgba(255,255,255,0.2);border-top:6px solid #c87941;border-radius:50%;animation:sp-spin 0.75s linear infinite;}
+@keyframes sp-spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+
+<body>
+
+<h2>Digital Aktivitets-checklista</h2>
+
+<div class="section">
+  <input id="title" placeholder="Titel på checklistan" oninput="updateData()">
+</div>
+
+<div id="steps"></div>
+
+<button onclick="addStep()">➕ Lägg till steg</button>
+
+<div class="tool-row">
+
+  <div class="tool-btn" onclick="downloadHTML()">
+    <div class="icon">📄</div>
+    <div class="label">Ladda ner HTML</div>
+  </div>
+
+  <div class="tool-btn" onclick="exportJSON()">
+    <div class="icon">⬇️</div>
+    <div class="label">Ladda ner JSON</div>
+  </div>
+
+  <div class="tool-btn" onclick="importJSON()">
+    <div class="icon">⬆️</div>
+    <div class="label">Ladda upp JSON</div>
+  </div>
+
+  <div class="tool-btn" onclick="createLink()">
+    <div class="icon">🔗</div>
+    <div class="label">Skapa länk</div>
+  </div>
+
+  <div class="tool-btn" onclick="downloadPDF()">
+    <div class="icon">🖨️</div>
+    <div class="label">Skriv ut PDF</div>
+  </div>
+
+</div>
+
+<br>
+
+<button onclick="generatePreview()">▶️ Generera preview</button>
+
+<div id="preview" class="section"></div>
+
+<script>
+
+let checklistData = { title:"", steps:[] };
+
+let stream = null;
+let recorder = null;
+let chunks = [];
+
+/* ===== UPLOAD VIA VERCEL ===== */
+async function uploadFile(path, content, repo) {
+  const res = await fetch(
+    "https://upload-api-kappa.vercel.app/api/upload",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path, content, repo })
+    }
+  );
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Upload failed");
+  return data;
+}
+
+/* ===== CLICK FEEDBACK ===== */
+function clickFeedback(){
+  try{
+    const audio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=");
+    audio.volume = 0.2;
+    audio.play();
+  }catch(e){}
+}
+
+document.addEventListener("click", e=>{
+  if(e.target.tagName === "BUTTON" || e.target.closest(".tool-btn")){
+    clickFeedback();
+  }
+});
+
+/* ===== CREATE LINK ===== */
+async function createLink(){
+
+  updateData();
+
+  const hasContent = checklistData.steps.some(s => s.text || s.img || s.audio);
+
+  if(!checklistData.title && !hasContent){
+    alert("Checklistan är tom.");
+    return;
+  }
+
+  document.getElementById('link-spinner').classList.add('on');
+
+  const id = Date.now();
+  const basePath = "checklist-" + id;
+  const repo = "Sukrutaraj/checklist-pages";
+
+  try {
+
+    // Ladda upp bilder och ljud, bygg steg-HTML
+    let stepsHtml = "";
+
+    for(let i = 0; i < checklistData.steps.length; i++){
+      const s = checklistData.steps[i];
+      if(!s.text && !s.img && !s.audio) continue;
+
+      let stepContent = "<div class='step'>";
+      stepContent += "<input type='checkbox' onchange='toggleStep(this)'>";
+      stepContent += "<div class='text'><b>" + (i+1) + ". " + (s.text||"") + "</b><br>";
+
+      if(s.img){
+        const imgName = basePath + "-img-" + i + ".jpg";
+        const base64 = s.img.split(",")[1];
+        await uploadFile(imgName, base64, repo);
+        await new Promise(r=>setTimeout(r,300));
+        stepContent += "<img src='https://sukrutaraj.github.io/checklist-pages/" + imgName + "'><br>";
+      }
+
+      if(s.audio){
+        const audioName = basePath + "-audio-" + i + ".webm";
+        const base64 = s.audio.split(",")[1];
+        await uploadFile(audioName, base64, repo);
+        await new Promise(r=>setTimeout(r,300));
+        stepContent += "<button onclick=\"new Audio('https://sukrutaraj.github.io/checklist-pages/" + audioName + "').play()\">🔊 Spela</button>";
+      }
+
+      stepContent += "</div></div>";
+      stepsHtml += stepContent;
+    }
+
+    const safeTitle = checklistData.title.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+    // CSS för den delade sidan
+    const css = [
+      "body{font-family:sans-serif;padding:20px;background:#f5f5f5;max-width:800px;margin:auto;}",
+      "h2{text-align:center;}",
+      ".step{background:white;padding:12px;margin:10px 0;border-radius:10px;display:flex;gap:12px;align-items:flex-start;}",
+      ".step img{max-width:140px;border-radius:8px;}",
+      ".completed{background:#e5f7e5;opacity:0.75;}",
+      ".text{flex:1;font-size:16px;}",
+      ".progress{text-align:center;font-size:18px;margin-top:20px;font-weight:bold;}",
+      "input[type=checkbox]{width:32px;height:32px;margin-top:4px;cursor:pointer;}",
+      "button{padding:8px 16px;border-radius:8px;border:none;background:#eee;cursor:pointer;font-size:15px;margin-top:6px;}",
+      ".reset-btn{display:block;margin:20px auto;padding:12px 24px;background:#1976D2;color:white;border:none;border-radius:10px;font-size:16px;cursor:pointer;}"
+    ].join("\n");
+
+    // JavaScript för den delade sidan
+    const scriptLines = [
+      "function toggleStep(el){",
+      "  var step=el.closest('.step');",
+      "  step.classList.toggle('completed',el.checked);",
+      "  updateProgress();",
+      "}",
+      "function updateProgress(){",
+      "  var total=document.querySelectorAll('.step').length;",
+      "  var done=document.querySelectorAll('.step input:checked').length;",
+      "  document.getElementById('progressText').textContent=done+' av '+total+' klara';",
+      "}",
+      "function resetChecklist(){",
+      "  document.querySelectorAll('input[type=\"checkbox\"]').forEach(function(c){c.checked=false;});",
+      "  document.querySelectorAll('.step').forEach(function(d){d.classList.remove('completed');});",
+      "  updateProgress();",
+      "}",
+      "updateProgress();"
+    ].join("\n");
+
+    // Bygg den delade HTML-sidan med säker strängsammansättning
+    const sharedHtml = [
+      "<!DOCTYPE html>",
+      "<html lang='sv'>",
+      "<head>",
+      "<meta charset='UTF-8'>",
+      "<meta name='viewport' content='width=device-width, initial-scale=1.0'>",
+      "<title>" + safeTitle + "</title>",
+      "<style>", css, "</style>",
+      "</head>",
+      "<body>",
+      "<h2>" + safeTitle + "</h2>",
+      "<div id='steps'>",
+      stepsHtml,
+      "</div>",
+      "<div class='progress' id='progressText'>0 av 0 klara</div>",
+      "<button class='reset-btn' onclick='resetChecklist()'>🔄 Återställ</button>",
+      "<script>",
+      scriptLines,
+      "<" + "/script>",
+      "</body>",
+      "</html>"
+    ].join("\n");
+
+    const htmlName = basePath + ".html";
+
+    await uploadFile(
+      htmlName,
+      btoa(unescape(encodeURIComponent(sharedHtml))),
+      repo
+    );
+
+    const url = "https://sukrutaraj.github.io/checklist-pages/" + htmlName;
+
+    let copied = false;
+    try{ await navigator.clipboard.writeText(url); copied = true; }catch(e){}
+
+    document.getElementById('link-spinner').classList.remove('on');
+    document.getElementById('qr-copied').textContent = copied ? '✔ Länken är kopierad till urklipp' : '⚠️ Kopiera länken manuellt';
+    document.getElementById('qr-copied').style.color = copied ? '#4CAF50' : '#e67e22';
+    showQR(url, checklistData.title || 'Länk skapad');
+
+  }catch(err){
+    document.getElementById('link-spinner').classList.remove('on');
+    alert("Fel: " + err.message);
+  }
+}
+
+/* ===== DATA ===== */
+function updateData(){
+  checklistData.title = document.getElementById("title").value;
+}
+
+/* ===== MIC ===== */
+async function initMic(){
+  if(!stream){
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }
+}
+
+/* ===== RENDER ===== */
+function render(){
+  const container=document.getElementById("steps");
+  container.innerHTML="";
+
+  checklistData.steps.forEach((step,i)=>{
+
+    const div=document.createElement("div");
+    div.className="section step";
+
+    div.innerHTML=`
+      <b>Steg ${i+1}</b><br>
+
+      <input value="${step.text||''}" placeholder="Beskrivning"
+      oninput="checklistData.steps[${i}].text=this.value">
+
+      <br>
+
+      <div>
+        📷 <input type="file" onchange="loadImage(event,${i})">
+      </div>
+
+      ${step.img ? `<img src="${step.img}">` : ''}
+
+      <div style="margin-top:8px;">
+        <button class="smallBtn" id="rec-btn-${i}" onclick="toggleRec(${i})">🎤 Spela in</button>
+        <button class="smallBtn" onclick="playRec(${i})" ${!step.audio ? 'disabled style="opacity:0.4"' : ''}>▶️ Lyssna</button>
+        ${step.audio ? `<button class="smallBtn" onclick="checklistData.steps[${i}].audio='';render()" style="color:#c00">🗑</button>` : ''}
+      </div>
+      ${step.audio
+        ? '<span style="font-size:11px;color:#4CAF50;display:block;margin-top:4px">✔ Ljud inspelat</span>'
+        : '<span style="font-size:11px;color:#999;display:block;margin-top:4px">Inget ljud</span>'
+      }
+
+      <br>
+
+      <div>
+        <button class="smallBtn" onclick="moveUp(${i})">🔼</button>
+        <button class="smallBtn" onclick="moveDown(${i})">🔽</button>
+        <button class="smallBtn" onclick="removeStep(${i})">🗑</button>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+/* ===== STEG ===== */
+function addStep(){
+  checklistData.steps.push({text:"",img:"",audio:""});
+  render();
+}
+
+function removeStep(i){
+  checklistData.steps.splice(i,1);
+  render();
+}
+
+function moveUp(i){
+  if(i === 0) return;
+  const temp = checklistData.steps[i];
+  checklistData.steps[i] = checklistData.steps[i-1];
+  checklistData.steps[i-1] = temp;
+  render();
+}
+
+function moveDown(i){
+  if(i === checklistData.steps.length - 1) return;
+  const temp = checklistData.steps[i];
+  checklistData.steps[i] = checklistData.steps[i+1];
+  checklistData.steps[i+1] = temp;
+  render();
+}
+
+/* ===== IMAGE (komprimering) ===== */
+function loadImage(e,i){
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = function(event){
+    img.onload = function(){
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const maxWidth = 600;
+      let width = img.width, height = img.height;
+      if(width > maxWidth){ const scale = maxWidth/width; width = maxWidth; height = height*scale; }
+      canvas.width = width; canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(function(blob){
+        const reader2 = new FileReader();
+        reader2.onload = function(){ checklistData.steps[i].img = reader2.result; render(); };
+        reader2.readAsDataURL(blob);
+      }, "image/jpeg", 0.6);
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ===== RECORD ===== */
+function toggleRec(i){
+  if(recorder && recorder.state === "recording"){
+    recorder.stop();
+    const btn = document.getElementById("rec-btn-" + i);
+    if(btn){ btn.textContent = "🎤 Spela in"; btn.style.background = "#eee"; }
+  } else {
+    startRec(i);
+  }
+}
+
+async function startRec(i){
+  await initMic();
+  chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: "audio/webm" });
+    const reader = new FileReader();
+    reader.onload = () => { checklistData.steps[i].audio = reader.result; render(); };
+    reader.readAsDataURL(blob);
+  };
+  recorder.start();
+  const btn = document.getElementById("rec-btn-" + i);
+  if(btn){ btn.textContent = "⏹ Stoppa"; btn.style.background = "#ffcccc"; }
+}
+
+function playRec(i){
+  if(checklistData.steps[i].audio){
+    new Audio(checklistData.steps[i].audio).play();
+  }
+}
+
+/* ===== HTML ===== */
+function downloadHTML(){
+  updateData();
+  let html = "<h2>" + checklistData.title + "</h2>";
+  checklistData.steps.forEach((s,i)=>{
+    html += "<div>" + (s.text||"") + "</div>";
+  });
+  download(html,"checklista.html","text/html");
+}
+
+/* ===== JSON ===== */
+function exportJSON(){
+  updateData();
+  download(JSON.stringify(checklistData,null,2),"checklista.json","application/json");
+}
+
+function importJSON(){
+  let input=document.createElement("input");
+  input.type="file";
+  input.onchange=e=>{
+    let r=new FileReader();
+    r.onload=()=>{
+      try{
+        const raw = JSON.parse(r.result);
+        checklistData = {
+          title: raw.title || "",
+          steps: (raw.steps || []).map(s => ({
+            text: s.text || "",
+            img: s.img || "",
+            audio: s.audio || ""
+          }))
+        };
+        document.getElementById("title").value = checklistData.title;
+        render();
+        alert("Checklista laddad korrekt!");
+      }catch{
+        alert("Ogiltig JSON-fil");
+      }
+    };
+    r.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+/* ===== PREVIEW ===== */
+function generatePreview(){
+  updateData();
+  let html="<h3>" + checklistData.title + "</h3>";
+  checklistData.steps.forEach((s,i)=>{
+    if(!s.text && !s.img && !s.audio) return;
+    html += "<div>";
+    html += "<b>Steg " + (i+1) + "</b><br>";
+    html += (s.text||"") + "<br>";
+    if(s.img) html += '<img src="' + s.img + '" style="max-height:100px;border-radius:8px"><br>';
+    if(s.audio) html += '<button onclick="new Audio(\'' + s.audio + '\').play()">▶️</button>';
+    html += "</div><br>";
+  });
+  const preview = document.getElementById("preview");
+  preview.innerHTML = html;
+  preview.style.display="block";
+}
+
+/* ===== DOWNLOAD ===== */
+function download(data,name,type="text/plain"){
+  const blob = new Blob([data],{type});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* INIT */
+addStep();
+
+
+/* ===== QR KOD ===== */
+function showQR(url, title) {
+  document.getElementById('qr-h').textContent = title || 'QR-kod';
+  document.getElementById('qr-u').textContent = url;
+  document.getElementById('qr-modal').classList.add('on');
+  var canvas = document.getElementById('qr-canvas');
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,200,200);
+  function doQR() {
+    var div = document.createElement('div');
+    new QRCode(div, {text:url,width:200,height:200,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+    setTimeout(function(){
+      var el = div.querySelector('canvas') || div.querySelector('img');
+      if(!el) return;
+      if(el.tagName==='CANVAS'){ ctx.drawImage(el,0,0,200,200); }
+      else { var i=new Image(); i.onload=function(){ctx.drawImage(i,0,0,200,200);}; i.src=el.src; }
+    }, 400);
+  }
+  if(typeof QRCode==='undefined'){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload=doQR; document.head.appendChild(s);
+  } else { doQR(); }
+}
+
+function dlQRpdf() {
+  var title = document.getElementById('qr-h').textContent;
+  var url   = document.getElementById('qr-u').textContent;
+  var canvas = document.getElementById('qr-canvas');
+  function build(Lib) {
+    var doc = new Lib({orientation:'portrait',unit:'mm',format:'a4'});
+    var W = doc.internal.pageSize.getWidth();
+    doc.setFontSize(22); doc.setFont('helvetica','bold');
+    doc.text(title, W/2, 30, {align:'center'});
+    var sz=100, x=(W-sz)/2;
+    doc.addImage(canvas.toDataURL('image/png'),'PNG',x,45,sz,sz);
+    doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100);
+    doc.text(url, W/2, 158, {align:'center', maxWidth:W-30});
+    doc.save((title.replace(/[^a-zA-Z0-9 ]/g,'_')||'qrkod')+'_QR.pdf');
+  }
+  function load(cb){
+    if(typeof jsPDF!=='undefined'){cb(jsPDF);return;}
+    if(window.jspdf){cb(window.jspdf.jsPDF);return;}
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=function(){cb(window.jspdf?window.jspdf.jsPDF:jsPDF);};
+    document.head.appendChild(s);
+  }
+  load(build);
+}
+
+/* ===== LADDA NER PDF ===== */
+function downloadPDF(){
+  updateData();
+  if(!checklistData.title && !checklistData.steps.some(s=>s.text||s.img)){
+    alert("Checklistan är tom.");return;
+  }
+  function getImgDims(dataUrl,maxW,maxH){
+    return new Promise(function(resolve){
+      var img=new Image();
+      img.onload=function(){
+        var w=img.naturalWidth,h=img.naturalHeight,ratio=w/h;
+        if(w>maxW){w=maxW;h=w/ratio;}
+        if(h>maxH){h=maxH;w=h*ratio;}
+        resolve({w:Math.round(w),h:Math.round(h)});
+      };
+      img.onerror=function(){resolve({w:maxW,h:maxH});};
+      img.src=dataUrl;
+    });
+  }
+  function buildPDF(Lib){
+    var doc=new Lib({orientation:"portrait",unit:"mm",format:"a4"});
+    var pageW=doc.internal.pageSize.getWidth();
+    var pageH=doc.internal.pageSize.getHeight();
+    var margin=15,contentW=pageW-margin*2,y=margin;
+    // Titel
+    doc.setFillColor(245,245,245);
+    doc.rect(0,0,pageW,22,"F");
+    doc.setFontSize(18);doc.setFont("helvetica","bold");doc.setTextColor(40,40,40);
+    doc.text(checklistData.title||"Checklista",pageW/2,14,{align:"center"});
+    y=28;
+    var steps=checklistData.steps.filter(function(s){return s.text||s.img;});
+    var dimPromises=steps.map(function(s){
+      if(!s.img)return Promise.resolve(null);
+      return getImgDims(s.img,50,45);
+    });
+    Promise.all(dimPromises).then(function(dims){
+      for(var i=0;i<steps.length;i++){
+        var s=steps[i],dim=dims[i];
+        var imgH=dim?dim.h:0;
+        var textLines=s.text?doc.splitTextToSize((i+1)+". "+s.text,contentW-22):[];
+        var blockH=Math.max(imgH,textLines.length*7)+12;
+        if(y+blockH>pageH-margin){doc.addPage();y=margin;}
+        // Checkbox
+        doc.setDrawColor(80,80,80);doc.setLineWidth(0.5);
+        doc.roundedRect(margin,y+2,8,8,1,1);
+        // Bild
+        if(s.img&&dim){
+          try{doc.addImage(s.img,"JPEG",margin+12,y,dim.w,dim.h);}catch(e){}
+        }
+        // Text
+        if(textLines.length>0){
+          var tx=dim?margin+12+dim.w+4:margin+12;
+          doc.setFontSize(12);doc.setFont("helvetica","normal");doc.setTextColor(40,40,40);
+          doc.text(textLines,tx,y+8);
+        }
+        y+=blockH;
+        doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);
+        doc.line(margin,y-2,pageW-margin,y-2);
+      }
+      doc.setFontSize(8);doc.setTextColor(160,160,160);
+      doc.text("Daglig Verksamhet – Digital Aktivitets-checklista",pageW/2,pageH-8,{align:"center"});
+      var name=(checklistData.title||"checklista").replace(/[^a-zA-Z0-9 ]/g,"_");
+      doc.save(name+".pdf");
+    });
+  }
+  if(typeof jsPDF!=="undefined"){buildPDF(jsPDF);return;}
+  if(window.jspdf){buildPDF(window.jspdf.jsPDF);return;}
+  var s=document.createElement("script");
+  s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  s.onload=function(){buildPDF(window.jspdf?window.jspdf.jsPDF:jsPDF);};
+  document.head.appendChild(s);
+}
+</script>
+
+
+
+<div id="link-spinner"><div class="sp-ring"></div></div>
+<div id="qr-modal">
+  <div class="qr-box">
+    <div class="qr-heading" id="qr-h"></div>
+    <div class="qr-url" id="qr-u"></div>
+    <canvas id="qr-canvas" width="200" height="200"></canvas><br>
+    <button class="qr-dl" onclick="dlQRpdf()">&#11015;&#65039; Ladda ner PDF</button>
+    <div id="qr-copied" style="font-size:12px;margin-bottom:10px;"></div>
+    <button class="qr-cl" onclick="document.getElementById('qr-modal').classList.remove('on')">Stäng</button>
+  </div>
+</div>
+</body>
+</html>
