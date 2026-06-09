@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang='sv'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Geografi</title>
+<style>
+body{font-family:sans-serif;padding:20px;background:#f5f5f5;max-width:800px;margin:auto;}
+h2{text-align:center;}
+.question{background:white;padding:12px;margin:10px 0;border-radius:10px;display:flex;gap:12px;align-items:flex-start;}
+.question img{max-width:140px;border-radius:8px;}
+.completed{background:#e5f7e5;opacity:0.75;}
+.text{flex:1;font-size:16px;}
+.progress{text-align:center;font-size:18px;margin-top:20px;font-weight:bold;}
+input[type=checkbox]{width:32px;height:32px;margin-top:4px;cursor:pointer;}
+button{padding:8px 16px;border-radius:8px;border:none;background:#eee;cursor:pointer;font-size:15px;margin-top:6px;}
+.reset-btn{display:block;margin:20px auto;padding:12px 24px;background:#1976D2;color:white;border:none;border-radius:10px;font-size:16px;cursor:pointer;}
+</style>
+</head>
+<body>
+<h2>Geografi</h2>
+<div id='questions'>
+<div class='question'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>1. Vad är Tysklands huvudstad?</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1781012572493-img-0.jpg'><br><button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/checklist-1781012572493-audio-0.webm').play()">🔊 Spela</button></div></div><div class='question'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>2. Vilket av de länderna är störst till yta? </b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1781012572493-img-1.jpg'><br><button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/checklist-1781012572493-audio-1.webm').play()">🔊 Spela</button></div></div><div class='question'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>3. Vilket Hav är störst?</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1781012572493-img-2.jpg'><br><button onclick="new Audio('https://sukrutaraj.github.io/checklist-pages/checklist-1781012572493-audio-2.webm').play()">🔊 Spela</button></div></div>
+</div>
+<div class='progress' id='progressText'>0 av 0 klara</div>
+<button class='reset-btn' onclick='resetChecklist()'>🔄 Återställ</button>
+<script>
+function toggleStep(el){
+  var question=el.closest('.question');
+  question.classList.toggle('completed',el.checked);
+  updateProgress();
+}
+function updateProgress(){
+  var total=document.querySelectorAll('.question').length;
+  var done=document.querySelectorAll('.question input:checked').length;
+  document.getElementById('progressText').textContent=done+' av '+total+' klara';
+}
+function resetChecklist(){
+  document.querySelectorAll('input[type="checkbox"]').forEach(function(c){c.checked=false;});
+  document.querySelectorAll('.question').forEach(function(d){d.classList.remove('completed');});
+  updateProgress();
+}
+updateProgress();
+</script>
+</body>
+</html>
