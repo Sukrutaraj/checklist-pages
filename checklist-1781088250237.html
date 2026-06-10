@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang='sv'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Blandade frågor</title>
+<style>
+body{font-family:sans-serif;background:#f5f5f5;text-align:center;padding:20px;max-width:800px;margin:auto;}
+.card{background:white;padding:25px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+h1{font-size:22px;margin-bottom:4px;}
+#counter{font-size:14px;color:#888;margin-bottom:16px;}
+#question h2{font-size:19px;margin-bottom:8px;}
+#question img{max-width:100%;max-height:200px;border-radius:12px;margin:8px auto;display:block;}
+.ans-btn{display:block;width:100%;padding:16px;margin-top:12px;border:none;border-radius:14px;background:#eee;font-size:17px;cursor:pointer;transition:background 0.2s;text-align:left;}
+.ans-btn.correct{background:#4CAF50;color:white;font-weight:bold;}
+.ans-btn.wrong{background:#f44336;color:white;}
+.ans-btn.reveal{background:#e8f5e9;color:#2e7d32;font-weight:bold;}
+.feedback{margin-top:16px;font-size:22px;font-weight:bold;min-height:28px;}
+.feedback.ok{color:#4CAF50;}
+.feedback.fail{color:#f44336;}
+.next-btn{margin-top:16px;padding:14px 32px;background:#1976D2;color:white;border:none;border-radius:50px;font-size:16px;cursor:pointer;display:none;}
+.progress{height:6px;background:#eee;border-radius:3px;margin-bottom:20px;}
+.progress-bar{height:6px;background:#4CAF50;border-radius:3px;transition:width 0.4s;}
+.result-emoji{font-size:60px;margin:16px 0;}
+</style>
+</head>
+<body>
+<div class='card'>
+<h1 id='quiz-title'></h1>
+<div class='progress'><div class='progress-bar' id='prog-bar' style='width:0%'></div></div>
+<div id='counter'></div>
+<div id='question'></div>
+<div id='answers'></div>
+<div class='feedback' id='feedback'></div>
+<button class='next-btn' id='next-btn' onclick='nextQuestion()'>Nästa fråga →</button>
+</div>
+<script>
+
+var questions = [{"text":"Vad kallas en bebis av en ko?","answer1":"Kalv","answerX":"Knyte","answer2":"Kid","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-0.jpg"},{"text":"Vilken svensk musikgrupp hade en stor hit med låten \"Dancing Queen\"","answer1":"Ace of Base","answerX":"Roxette","answer2":"ABBA","correct":"2","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-1.jpg"},{"text":"Vad heter huvudkaraktären som spelas av Tom Hanks i filmen Forrest Gump (1994)?","answer1":"Forrest Gump","answerX":"Benjamin Button","answer2":"Chuck Noland","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-2.jpg"},{"text":"Hur många spelare finns det på planen samtidigt för ett lag i vanlig handboll?","answer1":"6 utespelare + 1 målvakt","answerX":"5 utespelare + 1 målvakt","answer2":"7 utespelare + 1 målvakt","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-3.jpg"},{"text":"Hur lång är en tum?","answer1":"2,5 cm","answerX":"1,5 cm","answer2":"1 m","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-4.jpg"},{"text":"Vem i svenska kungafamiljen är född 1979?","answer1":"Madeleine","answerX":"Carl-Philip","answer2":"Victoria","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-5.jpg"},{"text":"Vilken är Sveriges tredje största sjö?","answer1":"Hjälmaren","answerX":"Mälaren","answer2":"Storsjön","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-6.jpg"},{"text":"Vilket land har vunnit flest EM-guld i fotboll?","answer1":"Italien och Portugal","answerX":"England och Sverige","answer2":"Spanien och Tyskland","correct":"2","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-7.jpg"},{"text":"Hur många länder finns det i världen?","answer1":"560","answerX":"195","answer2":"94","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-8.jpg"},{"text":"När skapades Facebook?","answer1":"1994","answerX":"2011","answer2":"2004","correct":"2","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781088250237-img-9.jpg"}];
+var quizTitle = "Blandade frågor";
+var current = 0, points = 0, answered = false;
+document.getElementById('quiz-title').textContent = quizTitle;
+
+function renderQuestion(){
+  answered = false;
+  var fb = document.getElementById('feedback');
+  fb.textContent = '';
+  fb.className = 'feedback';
+  document.getElementById('next-btn').style.display = 'none';
+  var q = questions[current];
+  var pct = Math.round((current / questions.length) * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('counter').textContent = 'Fråga ' + (current + 1) + ' av ' + questions.length;
+  var qHtml = '<h2>' + q.text + '</h2>';
+  if(q.imgUrl){ qHtml += '<img src="' + q.imgUrl + '" alt="frågebild">'; }
+  document.getElementById('question').innerHTML = qHtml;
+  var btns = [
+    {val:'1', label:'1. ' + q.answer1},
+    {val:'X', label:'X. ' + q.answerX},
+    {val:'2', label:'2. ' + q.answer2}
+  ];
+  var ans = document.getElementById('answers');
+  ans.innerHTML = '';
+  btns.forEach(function(b){
+    var btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.id = 'btn-' + b.val;
+    btn.textContent = b.label;
+    btn.onclick = function(){ checkAnswer(b.val); };
+    ans.appendChild(btn);
+  });
+}
+
+function checkAnswer(a){
+  if(answered) return;
+  answered = true;
+  var q = questions[current];
+  var isRight = (a === q.correct);
+  if(isRight) points++;
+  var cb = document.getElementById('btn-' + a);
+  if(cb) cb.className = 'ans-btn ' + (isRight ? 'correct' : 'wrong');
+  if(!isRight){
+    var rb = document.getElementById('btn-' + q.correct);
+    if(rb) rb.className = 'ans-btn reveal';
+  }
+  var fb = document.getElementById('feedback');
+  fb.textContent = isRight ? '✅ Rätt!' : '❌ Fel!';
+  fb.className = 'feedback ' + (isRight ? 'ok' : 'fail');
+  var nb = document.getElementById('next-btn');
+  nb.style.display = 'inline-block';
+  nb.textContent = (current >= questions.length - 1) ? 'Se resultat →' : 'Nästa fråga →';
+}
+
+function nextQuestion(){
+  current++;
+  if(current >= questions.length){ showResult(); }
+  else { renderQuestion(); }
+}
+
+function showResult(){
+  var pct = Math.round((points / questions.length) * 100);
+  var emoji = pct === 100 ? '🏆' : pct >= 70 ? '🎉' : pct >= 40 ? '👍' : '💪';
+  document.querySelector('.card').innerHTML =
+    '<div class="result-emoji">' + emoji + '</div>' +
+    '<h1>Klart!</h1>' +
+    '<h2>' + points + ' av ' + questions.length + ' rätt</h2>' +
+    '<p style="color:#888;font-size:14px;">' + pct + '% rätt</p>' +
+    '<button class="next-btn" style="display:inline-block;background:#1976D2;" onclick="location.reload()">Spela igen 🔄</button>';
+}
+
+renderQuestion();
+
+</script>
+</body>
+</html>
