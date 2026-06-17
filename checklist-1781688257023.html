@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang='sv'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Tipsrunda: Bladade frågor</title>
+<style>
+body{font-family:sans-serif;background:#f5f5f5;text-align:center;padding:20px;max-width:800px;margin:auto;}
+.card{background:white;padding:25px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+h1{font-size:22px;margin-bottom:4px;}
+#counter{font-size:14px;color:#888;margin-bottom:16px;}
+#question h2{font-size:19px;margin-bottom:8px;}
+#question img{max-width:100%;max-height:200px;border-radius:12px;margin:8px auto;display:block;}
+.ans-btn{display:block;width:100%;padding:16px;margin-top:12px;border:none;border-radius:14px;background:#eee;font-size:17px;cursor:pointer;transition:background 0.2s;text-align:left;}
+.ans-btn.correct{background:#4CAF50;color:white;font-weight:bold;}
+.ans-btn.wrong{background:#f44336;color:white;}
+.ans-btn.reveal{background:#e8f5e9;color:#2e7d32;font-weight:bold;}
+.feedback{margin-top:16px;font-size:22px;font-weight:bold;min-height:28px;}
+.feedback.ok{color:#4CAF50;}
+.feedback.fail{color:#f44336;}
+.next-btn{margin-top:16px;padding:14px 32px;background:#1976D2;color:white;border:none;border-radius:50px;font-size:16px;cursor:pointer;display:none;}
+.progress{height:6px;background:#eee;border-radius:3px;margin-bottom:20px;}
+.progress-bar{height:6px;background:#4CAF50;border-radius:3px;transition:width 0.4s;}
+.result-emoji{font-size:60px;margin:16px 0;}
+.opt{padding:14px;margin-top:10px;border-radius:14px;background:#eee;font-size:17px;text-align:left;}
+.station-note{color:#888;font-size:13px;margin-top:18px;}
+</style>
+</head>
+<body>
+<div class='card'>
+<h1 id='quiz-title'></h1>
+<div class='progress'><div class='progress-bar' id='prog-bar' style='width:0%'></div></div>
+<div id='counter'></div>
+<div id='question'></div>
+<div id='answers'></div>
+<div class='feedback' id='feedback'></div>
+<button class='next-btn' id='next-btn' onclick='nextQuestion()'>Nästa fråga →</button>
+</div>
+<script>
+
+var questions = [{"text":"Hur ofta regnar det på midsommar i Skåne i procent?","answer1":"Grön - 35% av alla midsomrar","answerX":"Rosa - Hälften av alla midsomrar","answer2":"Blå - 75% av alla midsomrar","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-0.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-0.wav"},{"text":"Hur många burkar sill säljs varje midsommarvecka?","answer1":"Grön - 5 miljoner","answerX":"Rosa - 3,5 miljoner","answer2":"Blå - 7 miljoner","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-1.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-1.wav"},{"text":"Vad brukar inte finnas på midsommarbordet?","answer1":"Grön - sill","answerX":"rosa - hamburgare","answer2":"Blå - potatis","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-2.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-2.wav"},{"text":"Enligt svensk folktro var midsommarnatten magisk. Vad skulle man drömma om ifall man la sju sorters blommor under huvudkudden?","answer1":"Grön - Vad man skulle äta till middag","answerX":"rosa - Sin framtida make eller maka.","answer2":"Blå - Sitt framtida yrke","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-3.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-3.wav"},{"text":"Vilken musik gillar INGRID?","answer1":"Grön - 80 tals musik","answerX":"Rosa - 50 tals musik","answer2":"Blå - Modern musik","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-4.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-4.wav"},{"text":"Vilket land kommer TikTok ifrån?","answer1":"Grön - Kina","answerX":"Rosa - Sverige","answer2":"Blå - USA","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-5.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-5.wav"},{"text":"Vilket år öppnade Diabasen?","answer1":"Grön - 2017","answerX":"Rosa - 2011","answer2":"Blå - 2007","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-6.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-6.wav"},{"text":"Hur många jordgubbar äter vi ungefär i Sverige varje år?","answer1":"Grön - 20,000 ton","answerX":"Rosa - 100,000 ton","answer2":"Blå - 12,365 ton","correct":"1","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-7.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-7.wav"},{"text":"Vilket år blev midsommardagen en fast röd dag i Sverige?","answer1":"Grön - 1899","answerX":"Rosa - 1953","answer2":"Blå - 2004","correct":"X","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-8.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-8.wav"},{"text":"Hur mycket vann Norge med i deras första VM match 2026?","answer1":"Grön - 3/1","answerX":"Rosa - 2/2","answer2":"Blå - 4/1","correct":"2","imgUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-img-9.jpg","audioUrl":"https://sukrutaraj.github.io/checklist-pages/checklist-1781688257023-audio-9.wav"}];
+var quizTitle = "Tipsrunda: Bladade frågor";
+var current = 0, points = 0, answered = false;
+document.getElementById('quiz-title').textContent = quizTitle;
+
+function renderQuestion(){
+  answered = false;
+  var fb = document.getElementById('feedback');
+  fb.textContent = '';
+  fb.className = 'feedback';
+  document.getElementById('next-btn').style.display = 'none';
+  var q = questions[current];
+  var pct = Math.round((current / questions.length) * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('counter').textContent = 'Fråga ' + (current + 1) + ' av ' + questions.length;
+  var qHtml = '<h2>' + q.text + '</h2>';
+  if(q.imgUrl){ qHtml += '<img src="' + q.imgUrl + '" alt="frågebild">'; }
+  if(q.audioUrl){ qHtml += '<audio controls preload="metadata" src="' + q.audioUrl + '" style="width:100%;margin-top:10px;">Din webbläsare kan inte spela upp ljudet.</audio>'; }
+  document.getElementById('question').innerHTML = qHtml;
+  var btns = [
+    {val:'1', label:'1. ' + q.answer1},
+    {val:'X', label:'X. ' + q.answerX},
+    {val:'2', label:'2. ' + q.answer2}
+  ];
+  var ans = document.getElementById('answers');
+  ans.innerHTML = '';
+  btns.forEach(function(b){
+    var btn = document.createElement('button');
+    btn.className = 'ans-btn';
+    btn.id = 'btn-' + b.val;
+    btn.textContent = b.label;
+    btn.onclick = function(){ checkAnswer(b.val); };
+    ans.appendChild(btn);
+  });
+}
+
+function checkAnswer(a){
+  if(answered) return;
+  answered = true;
+  var q = questions[current];
+  var isRight = (a === q.correct);
+  if(isRight) points++;
+  var cb = document.getElementById('btn-' + a);
+  if(cb) cb.className = 'ans-btn ' + (isRight ? 'correct' : 'wrong');
+  if(!isRight){
+    var rb = document.getElementById('btn-' + q.correct);
+    if(rb) rb.className = 'ans-btn reveal';
+  }
+  var fb = document.getElementById('feedback');
+  fb.textContent = isRight ? '✅ Rätt!' : '❌ Fel!';
+  fb.className = 'feedback ' + (isRight ? 'ok' : 'fail');
+  var nb = document.getElementById('next-btn');
+  nb.style.display = 'inline-block';
+  nb.textContent = (current >= questions.length - 1) ? 'Se resultat →' : 'Nästa fråga →';
+}
+
+function nextQuestion(){
+  current++;
+  if(current >= questions.length){ showResult(); }
+  else { renderQuestion(); }
+}
+
+function showResult(){
+  var pct = Math.round((points / questions.length) * 100);
+  var emoji = pct === 100 ? '🏆' : pct >= 70 ? '🎉' : pct >= 40 ? '👍' : '💪';
+  document.querySelector('.card').innerHTML =
+    '<div class="result-emoji">' + emoji + '</div>' +
+    '<h1>Klart!</h1>' +
+    '<h2>' + points + ' av ' + questions.length + ' rätt</h2>' +
+    '<p style="color:#888;font-size:14px;">' + pct + '% rätt</p>' +
+    '<button class="next-btn" style="display:inline-block;background:#1976D2;" onclick="location.reload()">Spela igen 🔄</button>';
+}
+
+// Enskild fråga (öppnas via QR-kod, t.ex. #q=3) – visar ljud + alternativ utan facit
+function renderSingle(idx){
+  if(isNaN(idx) || idx < 0 || idx >= questions.length){ renderQuestion(); return; }
+  var q = questions[idx];
+  var html = '<h1>' + quizTitle + '</h1>';
+  html += '<div id="counter">Fråga ' + (idx + 1) + ' av ' + questions.length + '</div>';
+  html += '<div id="question"><h2>' + q.text + '</h2>';
+  if(q.imgUrl){ html += '<img src="' + q.imgUrl + '" alt="frågebild">'; }
+  if(q.audioUrl){ html += '<audio controls preload="metadata" src="' + q.audioUrl + '" style="width:100%;margin-top:10px;"></audio>'; }
+  html += '</div>';
+  if(q.answer1) html += '<div class="opt">1. ' + q.answer1 + '</div>';
+  if(q.answerX) html += '<div class="opt">X. ' + q.answerX + '</div>';
+  if(q.answer2) html += '<div class="opt">2. ' + q.answer2 + '</div>';
+  html += '<p class="station-note">Markera ditt svar (1, X eller 2) på din svarsmall.</p>';
+  document.querySelector('.card').innerHTML = html;
+}
+
+var hashMatch = (location.hash.match(/q=(\d+)/) || [])[1];
+if(hashMatch){ renderSingle(parseInt(hashMatch, 10) - 1); }
+else { renderQuestion(); }
+
+</script>
+</body>
+</html>
