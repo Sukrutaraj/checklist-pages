@@ -344,7 +344,7 @@ label.field-label {
 </div>
 
 <div class="hint-box">
-  Visa ett tecken framför kameran – texten visas nedanför
+  Visa ett tecken så läses det av · spela in nya tecken och tryck ☁️ Skicka in för att lära verktyget
 </div>
 
 <!-- VIDEO -->
@@ -400,7 +400,7 @@ label.field-label {
   </div>
 </div>
 
-<!-- HIDDEN FILE INPUT (the .json learning data) -->
+<!-- HIDDEN FILE INPUT (.json import för migrering) -->
 <input type="file" id="datasetFile" accept=".json,application/json" multiple
        style="display:none" onchange="importData(event)">
 
@@ -409,15 +409,19 @@ label.field-label {
   <button class="circle-btn primary" onclick="startRecording()">
     <span class="ci">🎤</span>Spela in
   </button>
-  <button class="circle-btn" onclick="document.getElementById('datasetFile').click()">
-    <span class="ci">📂</span>Ladda upp
+  <button class="circle-btn" onclick="submitToShared()">
+    <span class="ci">☁️</span>Skicka in
   </button>
   <button class="circle-btn" onclick="trainModel()">
-    <span class="ci">🧠</span>Lär verktyget
+    <span class="ci">🧠</span>Träna &amp; dela
   </button>
   <button class="circle-btn" onclick="downloadData()">
     <span class="ci">💾</span>Ladda ner
   </button>
+</div>
+
+<div class="subtitle-controls" style="margin-top:4px;">
+  <button class="pill-btn" onclick="document.getElementById('datasetFile').click()">📂 Importera .json-fil</button>
 </div>
 
 <script>
@@ -561,7 +565,7 @@ function deleteGesture(i) {
   saveDataset();
   renderLibrary();
   model = null;
-  setStatus("ready", "Redo", "Lär verktyget igen efter ändring");
+  setStatus("ready", "Redo", "Träna & dela igen efter ändring");
 }
 
 /* ════════════════════════════════════════════
@@ -912,7 +916,7 @@ function importData(e) {
         if (addedSamples > 0) {
           setStatus("success",
             "Uppladdad! (" + addedSamples + " inspelningar)",
-            dataset.length + " tecken totalt — tryck 🧠 Lär verktyget");
+            dataset.length + " tecken totalt — tryck ☁️ Skicka in eller 🧠 Träna & dela");
         } else {
           setStatus("error", "Inget nytt lades till", "Filformatet kändes inte igen eller fanns redan");
         }
@@ -991,6 +995,32 @@ async function saveDatasetToRepo() {
   const out = [];
   dataset.forEach(e => e.samples.forEach(seq => out.push({ label: e.label, sequence: seq })));
   await uploadFile(DATA_PATH, b64FromString(JSON.stringify(out)));
+}
+
+/* ÖPPEN BIDRAGSFUNKTION: skicka in lokala inspelningar till den delade samlingen.
+   Tränar ingenting (lätt – fungerar på mobil). Hämtar först senaste samlingen och
+   slår ihop, så att ingen skriver över andras tecken. */
+async function submitToShared() {
+  const localCount = dataset.reduce((s, e) => s + e.samples.length, 0);
+  if (localCount === 0) {
+    setStatus("error", "Inget att skicka in", "Spela in minst ett tecken först");
+    return;
+  }
+  setStatus("busy", "Skickar in...", "slår ihop med andras tecken");
+  try {
+    try { await loadDatasetFromRepo(); } catch (e) { /* tomt repo / första gången */ }
+    await saveDatasetToRepo();
+    const total = dataset.reduce((s, e) => s + e.samples.length, 0);
+    setStatus("success", "Inskickat – tack!",
+      total + " inspelningar i samlingen. En dator kan nu träna om modellen.");
+  } catch (e) {
+    let reason = e && e.message ? e.message : "okänt fel";
+    if (/Failed to fetch|NetworkError|load failed/i.test(reason)) {
+      reason = "Når inte servern (öppna via https://, inte som lokal fil)";
+    }
+    setStatus("error", "Kunde inte skicka in", reason);
+    console.error("Inskickning misslyckades:", e);
+  }
 }
 
 /* Ladda den delade tränade modellen från repot (sätter model + labels) */
