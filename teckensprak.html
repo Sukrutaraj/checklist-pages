@@ -748,8 +748,12 @@ async function trainModel() {
     setStatus("success", "Klar och delad! (" + lastAcc + "%)",
       "Alla som öppnar länken får detta");
   } catch (e) {
-    setStatus("error", "Tränad – men inte delad",
-      "Kunde inte spara till servern. Sparad lokalt på den här enheten.");
+    let reason = e && e.message ? e.message : "okänt fel";
+    if (/Failed to fetch|NetworkError|load failed/i.test(reason)) {
+      reason = "Når inte servern (öppna via https://, inte som lokal fil)";
+    }
+    setStatus("error", "Tränad – men inte delad", reason);
+    console.error("Publicering misslyckades:", e);
   }
 }
 
