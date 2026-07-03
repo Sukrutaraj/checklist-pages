@@ -344,7 +344,7 @@ label.field-label {
 </div>
 
 <div class="hint-box">
-  Visa ett tecken så läses det av · spela in nya tecken och tryck ☁️ Skicka in för att lära verktyget
+  Visa ett tecken framför kameran – texten visas nedanför
 </div>
 
 <!-- VIDEO -->
@@ -400,7 +400,7 @@ label.field-label {
   </div>
 </div>
 
-<!-- HIDDEN FILE INPUT (.json import för migrering) -->
+<!-- HIDDEN FILE INPUT (the .json learning data) -->
 <input type="file" id="datasetFile" accept=".json,application/json" multiple
        style="display:none" onchange="importData(event)">
 
@@ -409,19 +409,15 @@ label.field-label {
   <button class="circle-btn primary" onclick="startRecording()">
     <span class="ci">🎤</span>Spela in
   </button>
-  <button class="circle-btn" onclick="submitToShared()">
-    <span class="ci">☁️</span>Skicka in
+  <button class="circle-btn" onclick="document.getElementById('datasetFile').click()">
+    <span class="ci">📂</span>Ladda upp
   </button>
   <button class="circle-btn" onclick="trainModel()">
-    <span class="ci">🧠</span>Träna &amp; dela
+    <span class="ci">🧠</span>Lär verktyget
   </button>
   <button class="circle-btn" onclick="downloadData()">
     <span class="ci">💾</span>Ladda ner
   </button>
-</div>
-
-<div class="subtitle-controls" style="margin-top:4px;">
-  <button class="pill-btn" onclick="document.getElementById('datasetFile').click()">📂 Importera .json-fil</button>
 </div>
 
 <script>
@@ -565,7 +561,7 @@ function deleteGesture(i) {
   saveDataset();
   renderLibrary();
   model = null;
-  setStatus("ready", "Redo", "Träna & dela igen efter ändring");
+  setStatus("ready", "Redo", "Lär verktyget igen efter ändring");
 }
 
 /* ════════════════════════════════════════════
@@ -721,13 +717,15 @@ async function trainModel() {
     shuffle: true,
     validationData: xValT ? [xValT, yValT] : undefined,
     callbacks: {
-      onEpochEnd: (epoch, logs) => {
+      onEpochEnd: async (epoch, logs) => {
         const pct = Math.round(((epoch + 1) / EPOCHS) * 100);
         barFill.style.width = pct + "%";
         const acc = Math.round(((logs.val_acc ?? logs.acc) || 0) * 100);
         lastAcc = acc;
         barLabel.textContent = "Epoch " + (epoch + 1) + " / " + EPOCHS + "  ·  Träffsäkerhet " + acc + "%";
-      }
+        await tf.nextFrame();   // släpp fram webbläsaren så sidan inte fryser
+      },
+      onBatchEnd: async () => { await tf.nextFrame(); }
     }
   });
 
@@ -750,13 +748,8 @@ async function trainModel() {
     setStatus("success", "Klar och delad! (" + lastAcc + "%)",
       "Alla som öppnar länken får detta");
   } catch (e) {
-    // Visa det faktiska felet så det går att felsöka
-    let reason = e && e.message ? e.message : "okänt fel";
-    if (/Failed to fetch|NetworkError|load failed/i.test(reason)) {
-      reason = "Når inte servern (öppna via https://, inte som lokal fil)";
-    }
-    setStatus("error", "Tränad – men inte delad", reason);
-    console.error("Publicering misslyckades:", e);
+    setStatus("error", "Tränad – men inte delad",
+      "Kunde inte spara till servern. Sparad lokalt på den här enheten.");
   }
 }
 
@@ -895,12 +888,15 @@ function importData(e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
 
+  setStatus("busy", "Läser in...", "bearbetar filen");
+
   let filesDone = 0;
   let addedSamples = 0;
 
   files.forEach(file => {
     const r = new FileReader();
-    r.onload = () => {
+    r.onload = async () => {
+      await new Promise(res => setTimeout(res, 0));   // låt "Läser in..." ritas först
       try {
         const incoming = JSON.parse(r.result);
         addedSamples += mergeIncoming(incoming).added;
@@ -995,32 +991,6 @@ async function saveDatasetToRepo() {
   const out = [];
   dataset.forEach(e => e.samples.forEach(seq => out.push({ label: e.label, sequence: seq })));
   await uploadFile(DATA_PATH, b64FromString(JSON.stringify(out)));
-}
-
-/* ÖPPEN BIDRAGSFUNKTION: skicka in lokala inspelningar till den delade samlingen.
-   Tränar ingenting (lätt – fungerar på mobil). Hämtar först senaste samlingen och
-   slår ihop, så att ingen skriver över andras tecken. */
-async function submitToShared() {
-  const localCount = dataset.reduce((s, e) => s + e.samples.length, 0);
-  if (localCount === 0) {
-    setStatus("error", "Inget att skicka in", "Spela in minst ett tecken först");
-    return;
-  }
-  setStatus("busy", "Skickar in...", "slår ihop med andras tecken");
-  try {
-    try { await loadDatasetFromRepo(); } catch (e) { /* tomt repo / första gången */ }
-    await saveDatasetToRepo();
-    const total = dataset.reduce((s, e) => s + e.samples.length, 0);
-    setStatus("success", "Inskickat – tack!",
-      total + " inspelningar i samlingen. En dator kan nu träna om modellen.");
-  } catch (e) {
-    let reason = e && e.message ? e.message : "okänt fel";
-    if (/Failed to fetch|NetworkError|load failed/i.test(reason)) {
-      reason = "Når inte servern (öppna via https://, inte som lokal fil)";
-    }
-    setStatus("error", "Kunde inte skicka in", reason);
-    console.error("Inskickning misslyckades:", e);
-  }
 }
 
 /* Ladda den delade tränade modellen från repot (sätter model + labels) */
