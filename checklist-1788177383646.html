@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang='sv'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>AI-stöd – Kom igång steg för steg</title>
+<style>
+body{font-family:sans-serif;padding:20px;background:#f5f5f5;max-width:800px;margin:auto;}
+h2{text-align:center;}
+.step{background:white;padding:12px;margin:10px 0;border-radius:10px;display:flex;gap:12px;align-items:flex-start;}
+.step img{max-width:140px;border-radius:8px;}
+.completed{background:#e5f7e5;opacity:0.75;}
+.text{flex:1;font-size:16px;}
+.progress{text-align:center;font-size:18px;margin-top:20px;font-weight:bold;}
+input[type=checkbox]{width:32px;height:32px;margin-top:4px;cursor:pointer;}
+button{padding:8px 16px;border-radius:8px;border:none;background:#eee;cursor:pointer;font-size:15px;margin-top:6px;}
+.reset-btn{display:block;margin:20px auto;padding:12px 24px;background:#1976D2;color:white;border:none;border-radius:10px;font-size:16px;cursor:pointer;}
+</style>
+</head>
+<body>
+<h2>AI-stöd – Kom igång steg för steg</h2>
+<div id='steps'>
+<div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>1. Öppna en AI-tjänst: Öppna exempelvis ChatGPT eller Microsoft Copilot i en app eller webbläsare.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-0.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>2. Ställ en fråga: Skriv vad du vill veta eller få hjälp med. Exempel: ”Vad kan jag göra med en iPad?”</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-1.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>3. Be AI förklara: Be AI förklara något enkelt eller på en nivå som passar dig.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-2.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>4. Be om steg för steg: Be AI dela upp en uppgift i tydliga steg. Exempel: ”Visa steg för steg hur jag kopplar mina hörlurar.”</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-3.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>5.  Ställ en följdfråga: Förstår du inte? Fråga igen. Exempel: ”Kan du förklara steg 3 enklare?”</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-4.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>6.  Be AI skriva: AI kan hjälpa dig skriva, sammanfatta, översätta och komma på idéer.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-5.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>7.  Visa en bild: Ladda upp en bild och fråga AI vad den visar eller be om hjälp med något på bilden.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-6.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>8. Be AI skapa något: AI kan hjälpa dig skapa bilder, texter, idéer, tabeller eller kod.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-7.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>9. Bygg en enkel hemsida: Be AI skapa en enkel HTML-sida. Exempel: ”Skapa en enkel hemsida med rubrik, bild och knappar.”</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-8.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>10. Ändra det AI skapat: Be AI ändra resultatet. Exempel: ”Gör texten större” eller ”Byt bakgrund.”</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-9.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>11. Kontrollera svaret⚠️ AI kan ha fel. Kontrollera viktig information och be gärna om källor.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-10.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>12. Testa själv! Ställ en fråga/ Ställ en följdfråga/ Be AI skriva något/ Ladda upp en bild/ Be AI skapa något/ Bygg en enkel HTML-sida/ Ändra något AI har skapat</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-11.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>13. 🆘 OM DU FASTNAR: Skriv: ”Jag förstår inte. Kan du förklara enklare och visa steg för steg?”💡 Du kan alltid fråga igen och be AI anpassa svaret.</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-12.jpg'><br></div></div><div class='step'><input type='checkbox' onchange='toggleStep(this)'><div class='text'><b>14. Tips och tricks</b><br><img src='https://sukrutaraj.github.io/checklist-pages/checklist-1788177383646-img-13.jpg'><br></div></div>
+</div>
+<div class='progress' id='progressText'>0 av 0 klara</div>
+<button class='reset-btn' onclick='resetChecklist()'>🔄 Återställ</button>
+<script>
+function toggleStep(el){
+  var step=el.closest('.step');
+  step.classList.toggle('completed',el.checked);
+  updateProgress();
+}
+function updateProgress(){
+  var total=document.querySelectorAll('.step').length;
+  var done=document.querySelectorAll('.step input:checked').length;
+  document.getElementById('progressText').textContent=done+' av '+total+' klara';
+}
+function resetChecklist(){
+  document.querySelectorAll('input[type="checkbox"]').forEach(function(c){c.checked=false;});
+  document.querySelectorAll('.step').forEach(function(d){d.classList.remove('completed');});
+  updateProgress();
+}
+updateProgress();
+</script>
+</body>
+</html>
