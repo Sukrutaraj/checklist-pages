@@ -1,0 +1,16 @@
+# Genererat innehåll (checklistor, aktivitetsval m.fl.)
+checklist-*.html
+aktivitetsval-*.html
+checklist-*-img-*.jpg
+checklist-*-audio-*.webm
+aktivitetsval-*-img-*.jpg
+aktivitetsval-*-audio-*.webm
+
+# Generella filtyper för säkerhets skull (fångar framtida varianter)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webm
+*.mp3
+*.wav
